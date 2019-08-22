@@ -365,3 +365,105 @@ class BandParity(MSONable):
         """
 
         pass
+
+    @staticmethod
+    def screen_semimetal(trim_parities):
+        """
+        Parity criteria screening for metallic band structures to predict if Weyl semimetal phase is allowed.
+
+        Args:
+            trim_parities (dict): non-spin-polarized trim parities.
+
+        Returns:
+            semimetal (int): -1 (system MIGHT be a semimetal) or 1 (not a semimetal).
+
+        """
+
+        # Count total number of odd parity states over all TRIMs
+        num_odd_states = 0
+
+        for trim_label, band_parities in trim_parities['up'].items():
+            num_odd_at_trim = np.sum(np.fromiter((1 for i in band_parities if i < 0), dtype=int))
+
+            num_odd_states += num_odd_at_trim
+
+        if num_odd_states % 2 == 1:
+            semimetal = -1
+        else:
+            semimetal = 1
+
+        return semimetal
+
+    @staticmethod
+    def screen_magnetic_parity(trim_parities):
+        """
+        Screen candidate inversion-symmetric magnetic topological materials from band parity criteria.
+
+        Returns a dictionary of *allowed* magnetic topological properties where their bool values indicate if the property is allowed.
+
+        REF: Turner et al., PRB 85, 165120 (2012).
+
+        Args:
+            trim_parities (dict): 'up' and 'down' spin channel occupied band parities at TRIM points.
+
+        Returns:
+            mag_screen (dict): Magnetic topological properties from band parities.
+
+        """
+
+        mag_screen = {"insulator": False, "polarization_bqhc": False, "magnetoelectric": False}
+
+        # Count total number of odd parity states over all TRIMs
+        num_odd_states = 0
+
+        # Check if any individual TRIM pt has an odd num of odd states
+        odd_total_at_trim = False
+
+        for spin in ['up', 'down']:
+            for trim_label, band_parities in trim_parities[spin].items():
+                num_odd_at_trim = np.sum(np.fromiter((1 for i in band_parities if i < 0), dtype=int))
+
+                num_odd_states += num_odd_at_trim
+
+                if num_odd_at_trim % 2 == 1:
+                    odd_total_at_trim = True
+
+        # Odd number of odd states -> CAN'T be an insulator
+        # Might be a Weyl semimetal
+        if num_odd_states % 2 == 1:
+            mag_screen["insulator"] = False
+            mag_screen["polarization_bqhc"] = False
+            mag_screen["magnetoelectric"] = False
+        else:
+            mag_screen["insulator"] = True
+
+        # Further screening for magnetic insulators
+        if mag_screen["insulator"]:
+
+            # Check if any individual TRIM pt has an odd num of odd states
+            # Either electrostatic polarization OR bulk quantized Hall
+            # conductivity
+            if odd_total_at_trim:
+                mag_screen["polarization_bqhc"] = True
+
+            # If no BQHC
+            # num_odd_states = 2*k for any odd integer k
+            k = num_odd_states / 2
+            if k.is_integer():
+                if int(k) % 2 == 1:  # odd
+                    mag_screen["magnetoelectric"] = True
+
+        return mag_screen
+
+
+
+
+
+
+
+
+
+
+
+
+
