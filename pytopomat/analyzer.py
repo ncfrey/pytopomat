@@ -350,21 +350,85 @@ class BandParity(MSONable):
 
         return trim_parities
 
-    def compute_z2(self):
+    def compute_z2(self, tol=0.2):
         """
-        Compute Z2 = (v0, v1v2v3) strong and weak topological indices in 3D from TRIM band parities.
+        Compute Z2 topological indices (index) in 3D (2D) from TRIM band parities.
+
+        Args:
+            tol (float): Tolerance for average energy difference between bands at TRIM points to define independent band group.
 
         """
 
-        pass
+        trim_labels = [key for key in self.trim_parities["up"].keys()]
 
-    def _get_band_subspace(self):
+        iband = self._get_band_subspace(tol)
+
+        if len(trim_labels) == 8:
+            Z2 = np.ones(4, dtype=int)
+
+
+            for label in trim_labels:
+                delta = 1
+                for parity in self.trim_parities["up"][label][iband:]:
+                    delta *= parity/abs(parity)
+                                       
+                Z2[0] *= delta                  
+
+                if label in ["x", "s", "u", "r"]:
+                    Z2[1] *= delta
+                if label in ["y", "s", "t", "r"]:
+                    Z2[2] *= delta
+                if label in ["z", "t", "u", "r"]:
+                    Z2[3] *= delta
+ 
+
+            return ((Z2-1)/-2)+0    
+
+        elif len(trim_labels) == 4:
+            Z2 = np.ones(1, dtype=int)
+
+            for label in trim_labels:
+                delta = 1
+                for parity in self.trim_parities["up"][label][iband:]:
+                    delta *= parity/abs(parity)
+
+                Z2 *= delta
+
+            return ((Z2-1)/-2)+0
+
+        else:
+            raise RuntimeError("Incorrect number of k-points in vasp2trace output.")
+
+
+    def _get_band_subspace(self, tol=0.2):
         """
         Find a subgroup of valence bands for topology analysis that are gapped from lower lying bands topologically trivial bands.
 
+        Args:
+            tol (float): Tolerance for average energy difference between bands at TRIM points to define independent band group.
+
         """
 
-        pass
+        points = [num for num in self.v2t_output['up'].traces.keys()]
+        
+        for point in points:
+            band_data = self.v2t_output['up'].traces[point]
+            nbands = len(self.v2t_output['up'].traces[point])
+
+            delta_e = np.zeros(nbands)
+
+            for band_num in range(nbands-1):
+                diff = abs(band_data[band_num+1][2] - band_data[band_num][2])
+                delta_e[band_num] += diff
+
+        delta_e = delta_e/len(points)
+
+        max_diff = delta_e[0]
+        for ind in range(nbands):
+            if delta_e[ind]-max_diff >= tol:
+                max_diff = delta_e[ind]
+
+        return np.argwhere(delta_e==max_diff)[0][0]+1
 
     @staticmethod
     def screen_semimetal(trim_parities):
