@@ -34,14 +34,13 @@ class Vasp2TraceCaller:
         "Please follow the instructions at http://www.cryst.ehu.es/cgi-bin/cryst/programs/topological.pl.",
     )
     def __init__(self, folder_name):
-
         """
         Run vasp2trace to find the set of irreducible representations at each maximal k-vec of a space group, given the eigenvalues.
 
         vasp2trace requires a self-consistent VASP run with the flags ISTART=0 and ICHARG=2; followed by a band structure calculation with ICHARG=11, ISYM=2, LWAVE=.True.
 
         High-symmetry kpts that must be included in the band structure path for a given spacegroup can be found in the max_KPOINTS_VASP folder in the vasp2trace directory.
-        
+
         Args:
             folder_name (str): Path to directory with OUTCAR and WAVECAR of band structure run with wavefunctions at the high-symmetry kpts.
         """
@@ -66,7 +65,8 @@ class Vasp2TraceCaller:
 
         if process.returncode != 0:
             raise RuntimeError(
-                "vasp2trace exited with return code {}.".format(process.returncode)
+                "vasp2trace exited with return code {}.".format(
+                    process.returncode)
             )
 
         self._stdout = stdout
@@ -106,7 +106,7 @@ class Vasp2TraceOutput(MSONable):
     ):
         """
         This class processes results from vasp2trace to classify material band topology and give topological invariants.
-        
+
         Refer to http://www.cryst.ehu.es/html/cryst/topological/File_Description.txt for further explanation of parameters.
 
         Args:
@@ -120,7 +120,7 @@ class Vasp2TraceOutput(MSONable):
             num_kvec_symm_ops (dict): {kvec_index: number of symm operations in the little cogroup of the kvec}. 
             symm_ops_in_little_cogroup (dict): {kvec_index: int indices that correspond to symm_ops}
             traces (dict): band index, band degeneracy, energy eigenval, Re eigenval, Im eigenval for each symm op in the little cogroup 
-            
+
         """
 
         self._vasp2trace_output = vasp2trace_output
@@ -146,10 +146,10 @@ class Vasp2TraceOutput(MSONable):
             num_occ_bands = int(lines[0])
             soc = int(lines[1])  # No: 0, Yes: 1
             num_symm_ops = int(lines[2])
-            symm_ops = np.loadtxt(lines[3 : 3 + num_symm_ops])
+            symm_ops = np.loadtxt(lines[3: 3 + num_symm_ops])
             num_max_kvec = int(lines[3 + num_symm_ops])
             kvecs = np.loadtxt(
-                lines[4 + num_symm_ops : 4 + num_symm_ops + num_max_kvec]
+                lines[4 + num_symm_ops: 4 + num_symm_ops + num_max_kvec]
             )
 
             # Dicts with kvec index as keys
@@ -163,7 +163,7 @@ class Vasp2TraceOutput(MSONable):
 
             # Block start line #s
             block_starts = []
-            for jdx, line in enumerate(lines[trace_start - 1 :], trace_start - 1):
+            for jdx, line in enumerate(lines[trace_start - 1:], trace_start - 1):
                 # Parse input lines
                 line = [i for i in line.split(" ") if i]
                 if len(line) == 1:  # A single entry <-> new block
@@ -175,9 +175,9 @@ class Vasp2TraceOutput(MSONable):
                 start_block = block_starts[idx]
                 if idx < num_max_kvec - 1:
                     next_block = block_starts[idx + 1]
-                    trace_str = lines[start_block + 2 : next_block]
+                    trace_str = lines[start_block + 2: next_block]
                 else:
-                    trace_str = lines[start_block + 2 :]
+                    trace_str = lines[start_block + 2:]
 
                 # Populate dicts
                 num_kvec_symm_ops[idx] = int(lines[start_block])
@@ -248,20 +248,23 @@ class BandParity(MSONable):
             self.trim_parities = {}
 
             # Up spin
-            parity_op_index_up = self._get_parity_op(self.v2t_output["up"].symm_ops)
+            parity_op_index_up = self._get_parity_op(
+                self.v2t_output["up"].symm_ops)
             self.trim_parities["up"] = self.get_trim_parities(
                 parity_op_index_up, self.v2t_output["up"]
             )
 
             # Down spin
-            parity_op_index_dn = self._get_parity_op(self.v2t_output["down"].symm_ops)
+            parity_op_index_dn = self._get_parity_op(
+                self.v2t_output["down"].symm_ops)
             self.trim_parities["down"] = self.get_trim_parities(
                 parity_op_index_dn, self.v2t_output["down"]
             )
 
         else:
             self.trim_parities = {}
-            parity_op_index = self._get_parity_op(self.v2t_output["up"].symm_ops)
+            parity_op_index = self._get_parity_op(
+                self.v2t_output["up"].symm_ops)
             self.trim_parities["up"] = self.get_trim_parities(
                 parity_op_index, self.v2t_output["up"]
             )
@@ -278,7 +281,8 @@ class BandParity(MSONable):
 
         """
 
-        parity_mat = np.array([-1, 0, 0, 0, -1, 0, 0, 0, -1])  # x,y,z -> -x,-y,-z
+        # x,y,z -> -x,-y,-z
+        parity_mat = np.array([-1, 0, 0, 0, -1, 0, 0, 0, -1])
 
         for idx, symm_op in enumerate(symm_ops):
             rot_mat = symm_op[0:9]  # Rotation matrix
@@ -357,6 +361,8 @@ class BandParity(MSONable):
         Args:
             tol (float): Tolerance for average energy difference between bands at TRIM points to define independent band group.
 
+        Returns:
+            Z2 (list): List of integer Z2 indices (index) in 3D (2D). 
         """
 
         trim_labels = [key for key in self.trim_parities["up"].keys()]
@@ -366,13 +372,12 @@ class BandParity(MSONable):
         if len(trim_labels) == 8:
             Z2 = np.ones(4, dtype=int)
 
-
             for label in trim_labels:
                 delta = 1
                 for parity in self.trim_parities["up"][label][iband:]:
                     delta *= parity/abs(parity)
-                                       
-                Z2[0] *= delta                  
+
+                Z2[0] *= delta
 
                 if label in ["x", "s", "u", "r"]:
                     Z2[1] *= delta
@@ -380,9 +385,8 @@ class BandParity(MSONable):
                     Z2[2] *= delta
                 if label in ["z", "t", "u", "r"]:
                     Z2[3] *= delta
- 
 
-            return ((Z2-1)/-2)+0    
+            return ((Z2-1)/-2)+0
 
         elif len(trim_labels) == 4:
             Z2 = np.ones(1, dtype=int)
@@ -397,8 +401,8 @@ class BandParity(MSONable):
             return ((Z2-1)/-2)+0
 
         else:
-            raise RuntimeError("Incorrect number of k-points in vasp2trace output.")
-
+            raise RuntimeError(
+                "Incorrect number of k-points in vasp2trace output.")
 
     def _get_band_subspace(self, tol=0.2):
         """
@@ -410,7 +414,7 @@ class BandParity(MSONable):
         """
 
         points = [num for num in self.v2t_output['up'].traces.keys()]
-        
+
         for point in points:
             band_data = self.v2t_output['up'].traces[point]
             nbands = len(self.v2t_output['up'].traces[point])
@@ -428,7 +432,7 @@ class BandParity(MSONable):
             if delta_e[ind]-max_diff >= tol:
                 max_diff = delta_e[ind]
 
-        return np.argwhere(delta_e==max_diff)[0][0]+1
+        return np.argwhere(delta_e == max_diff)[0][0]+1
 
     @staticmethod
     def screen_semimetal(trim_parities):
@@ -447,7 +451,8 @@ class BandParity(MSONable):
         num_odd_states = 0
 
         for trim_label, band_parities in trim_parities['up'].items():
-            num_odd_at_trim = np.sum(np.fromiter((1 for i in band_parities if i < 0), dtype=int))
+            num_odd_at_trim = np.sum(np.fromiter(
+                (1 for i in band_parities if i < 0), dtype=int))
 
             num_odd_states += num_odd_at_trim
 
@@ -475,7 +480,8 @@ class BandParity(MSONable):
 
         """
 
-        mag_screen = {"insulator": False, "polarization_bqhc": False, "magnetoelectric": False}
+        mag_screen = {"insulator": False,
+                      "polarization_bqhc": False, "magnetoelectric": False}
 
         # Count total number of odd parity states over all TRIMs
         num_odd_states = 0
@@ -485,7 +491,8 @@ class BandParity(MSONable):
 
         for spin in ['up', 'down']:
             for trim_label, band_parities in trim_parities[spin].items():
-                num_odd_at_trim = np.sum(np.fromiter((1 for i in band_parities if i < 0), dtype=int))
+                num_odd_at_trim = np.sum(np.fromiter(
+                    (1 for i in band_parities if i < 0), dtype=int))
 
                 num_odd_states += num_odd_at_trim
 
@@ -518,16 +525,3 @@ class BandParity(MSONable):
                     mag_screen["magnetoelectric"] = True
 
         return mag_screen
-
-
-
-
-
-
-
-
-
-
-
-
-
