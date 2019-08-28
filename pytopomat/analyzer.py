@@ -149,11 +149,11 @@ class Vasp2TraceOutput(MSONable):
             num_occ_bands = int(lines[0])
             soc = int(lines[1])  # No: 0, Yes: 1
             num_symm_ops = int(lines[2])
-            symm_ops = np.loadtxt(lines[3: 3 + num_symm_ops])
+            symm_ops = np.ndarray.tolist(np.loadtxt(lines[3: 3 + num_symm_ops]))
             num_max_kvec = int(lines[3 + num_symm_ops])
-            kvecs = np.loadtxt(
+            kvecs = np.ndarray.tolist(np.loadtxt(
                 lines[4 + num_symm_ops: 4 + num_symm_ops + num_max_kvec]
-            )
+            ))
 
             # Dicts with kvec index as keys
             num_kvec_symm_ops = {}
@@ -183,16 +183,16 @@ class Vasp2TraceOutput(MSONable):
                     trace_str = lines[start_block + 2:]
 
                 # Populate dicts
-                num_kvec_symm_ops[idx] = int(lines[start_block])
+                num_kvec_symm_ops[str(idx)] = int(lines[start_block])
                 soilcg = [
                     int(i.strip("\n"))
                     for i in lines[start_block + 1].split(" ")
                     if i.strip("\n")
                 ]
-                symm_ops_in_little_cogroup[idx] = soilcg
+                symm_ops_in_little_cogroup[str(idx)] = soilcg
 
-                trace = np.loadtxt(trace_str)
-                traces[idx] = trace
+                trace = np.ndarray.tolist(np.loadtxt(trace_str))
+                traces[str(idx)] = trace
 
         # Set instance attributes
         self.num_occ_bands = num_occ_bands
@@ -343,11 +343,11 @@ class BandParity(MSONable):
                 if np.array_equal(kvec, trim_pt):  # Check if a TRIM
 
                     # Index of parity op for this kvec
-                    kvec_parity_idx = v2to.symm_ops_in_little_cogroup[idx].index(
+                    kvec_parity_idx = v2to.symm_ops_in_little_cogroup[str(idx)].index(
                         parity_op_index
                     )
 
-                    kvec_traces = v2to.traces[idx]
+                    kvec_traces = v2to.traces[str(idx)]
                     for band_index, band in enumerate(kvec_traces):
 
                         # Real part of parity eigenval
@@ -573,7 +573,8 @@ class StructureDimensionality(MSONable):
         self.larsen_dim = get_dimensionality_larsen(self.structure_graph)
 
         # Use 3x3x3 supercell for Cheon dim
-        cheon_dim_str = get_dimensionality_cheon(self.structure, larger_cell=True)
+        cheon_dim_str = get_dimensionality_cheon(
+            self.structure, larger_cell=True)
 
         if cheon_dim_str == '0D':
             cheon_dim = 0
@@ -589,15 +590,3 @@ class StructureDimensionality(MSONable):
         self.cheon_dim = cheon_dim
 
         self.gorai_dim = get_dimensionality_gorai(self.structure)
-
-
-
-
-
-
-
-
-
-
-
-
