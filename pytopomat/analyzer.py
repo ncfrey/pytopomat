@@ -10,6 +10,9 @@ from monty.json import MSONable
 from monty.dev import requires
 from monty.os.path import which
 from pymatgen.core.operations import SymmOp
+from pymatgen.analysis.graphs import StructureGraph
+from pymatgen.analysis.dimensionality import get_dimensionality_larsen, get_dimensionality_cheon, get_dimensionality_gorai
+from pymatgen.analysis.local_env import MinimumDistanceNN
 
 """
 This module offers a high level framework for analyzing topological materials in a high-throughput context with VASP, Z2Pack, and Vasp2Trace.
@@ -525,3 +528,76 @@ class BandParity(MSONable):
                     mag_screen["magnetoelectric"] = True
 
         return mag_screen
+
+
+class StructureDimensionality(MSONable):
+    def __init__(self, structure, structure_graph=None, larsen_dim=None, cheon_dim=None, gorai_dim=None):
+        """
+        This class uses 3 algorithms implemented in pymatgen to automate recognition of layered materials.
+
+        Args:
+            structure (object): pmg Structure object.
+
+            structure_graph (object): pmg StructureGraph object.
+
+            larsen_dim (int): As defined in P. M. Larsen et al., Phys. Rev. Materials 3, 034003 (2019).
+
+            cheon_dim (int): As defined in Cheon, G. et al., Nano Lett. 2017.
+
+            gorai_dim (int): As defined in Gorai, P. et al., J. Mater. Chem. A 2, 4136 (2016).
+
+        """
+
+        self.structure = structure
+        self.structure_graph = structure_graph
+        self.larsen_dim = larsen_dim
+        self.cheon_dim = cheon_dim
+        self.gorai_dim = gorai_dim
+
+        # Default to MinimumDistanceNN for generating structure graph.
+        sgraph = MinimumDistanceNN().get_bonded_structure(structure)
+
+        self.structure_graph = sgraph
+
+        # Get all dimensionality defintions
+        self._get_structure_dimensionality()
+
+    def _get_structure_dimensionality(self):
+        """Structure dim according to 3 different algorithms.
+
+        Returns:
+            None: (sets self.dim instance variables).
+
+        """
+
+        self.larsen_dim = get_dimensionality_larsen(self.structure_graph)
+
+        # Use 3x3x3 supercell for Cheon dim
+        cheon_dim_str = get_dimensionality_cheon(self.structure, larger_cell=True)
+
+        if cheon_dim_str == '0D':
+            cheon_dim = 0
+        elif cheon_dim_str == '1D':
+            cheon_dim = 1
+        elif cheon_dim_str == '2D':
+            cheon_dim = 2
+        elif cheon_dim_str == '3D':
+            cheon_dim = 3
+        else:
+            cheon_dim = None
+
+        self.cheon_dim = cheon_dim
+
+        self.gorai_dim = get_dimensionality_gorai(self.structure)
+
+
+
+
+
+
+
+
+
+
+
+
