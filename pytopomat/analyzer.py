@@ -11,7 +11,11 @@ from monty.dev import requires
 from monty.os.path import which
 from pymatgen.core.operations import SymmOp
 from pymatgen.analysis.graphs import StructureGraph
-from pymatgen.analysis.dimensionality import get_dimensionality_larsen, get_dimensionality_cheon, get_dimensionality_gorai
+from pymatgen.analysis.dimensionality import (
+    get_dimensionality_larsen,
+    get_dimensionality_cheon,
+    get_dimensionality_gorai,
+)
 from pymatgen.analysis.local_env import MinimumDistanceNN
 
 """
@@ -68,8 +72,7 @@ class Vasp2TraceCaller:
 
         if process.returncode != 0:
             raise RuntimeError(
-                "vasp2trace exited with return code {}.".format(
-                    process.returncode)
+                "vasp2trace exited with return code {}.".format(process.returncode)
             )
 
         self._stdout = stdout
@@ -149,11 +152,11 @@ class Vasp2TraceOutput(MSONable):
             num_occ_bands = int(lines[0])
             soc = int(lines[1])  # No: 0, Yes: 1
             num_symm_ops = int(lines[2])
-            symm_ops = np.ndarray.tolist(np.loadtxt(lines[3: 3 + num_symm_ops]))
+            symm_ops = np.ndarray.tolist(np.loadtxt(lines[3 : 3 + num_symm_ops]))
             num_max_kvec = int(lines[3 + num_symm_ops])
-            kvecs = np.ndarray.tolist(np.loadtxt(
-                lines[4 + num_symm_ops: 4 + num_symm_ops + num_max_kvec]
-            ))
+            kvecs = np.ndarray.tolist(
+                np.loadtxt(lines[4 + num_symm_ops : 4 + num_symm_ops + num_max_kvec])
+            )
 
             # Dicts with kvec index as keys
             num_kvec_symm_ops = {}
@@ -166,7 +169,7 @@ class Vasp2TraceOutput(MSONable):
 
             # Block start line #s
             block_starts = []
-            for jdx, line in enumerate(lines[trace_start - 1:], trace_start - 1):
+            for jdx, line in enumerate(lines[trace_start - 1 :], trace_start - 1):
                 # Parse input lines
                 line = [i for i in line.split(" ") if i]
                 if len(line) == 1:  # A single entry <-> new block
@@ -178,9 +181,9 @@ class Vasp2TraceOutput(MSONable):
                 start_block = block_starts[idx]
                 if idx < num_max_kvec - 1:
                     next_block = block_starts[idx + 1]
-                    trace_str = lines[start_block + 2: next_block]
+                    trace_str = lines[start_block + 2 : next_block]
                 else:
-                    trace_str = lines[start_block + 2:]
+                    trace_str = lines[start_block + 2 :]
 
                 # Populate dicts
                 num_kvec_symm_ops[str(idx)] = int(lines[start_block])
@@ -251,23 +254,20 @@ class BandParity(MSONable):
             self.trim_parities = {}
 
             # Up spin
-            parity_op_index_up = self._get_parity_op(
-                self.v2t_output["up"].symm_ops)
+            parity_op_index_up = self._get_parity_op(self.v2t_output["up"].symm_ops)
             self.trim_parities["up"] = self.get_trim_parities(
                 parity_op_index_up, self.v2t_output["up"]
             )
 
             # Down spin
-            parity_op_index_dn = self._get_parity_op(
-                self.v2t_output["down"].symm_ops)
+            parity_op_index_dn = self._get_parity_op(self.v2t_output["down"].symm_ops)
             self.trim_parities["down"] = self.get_trim_parities(
                 parity_op_index_dn, self.v2t_output["down"]
             )
 
         else:
             self.trim_parities = {}
-            parity_op_index = self._get_parity_op(
-                self.v2t_output["up"].symm_ops)
+            parity_op_index = self._get_parity_op(self.v2t_output["up"].symm_ops)
             self.trim_parities["up"] = self.get_trim_parities(
                 parity_op_index, self.v2t_output["up"]
             )
@@ -378,7 +378,7 @@ class BandParity(MSONable):
             for label in trim_labels:
                 delta = 1
                 for parity in self.trim_parities["up"][label][iband:]:
-                    delta *= parity/abs(parity)
+                    delta *= parity / abs(parity)
 
                 Z2[0] *= delta
 
@@ -389,7 +389,7 @@ class BandParity(MSONable):
                 if label in ["z", "t", "u", "r"]:
                     Z2[3] *= delta
 
-            return ((Z2-1)/-2)+0
+            return ((Z2 - 1) / -2) + 0
 
         elif len(trim_labels) == 4:
             Z2 = np.ones(1, dtype=int)
@@ -397,15 +397,14 @@ class BandParity(MSONable):
             for label in trim_labels:
                 delta = 1
                 for parity in self.trim_parities["up"][label][iband:]:
-                    delta *= parity/abs(parity)
+                    delta *= parity / abs(parity)
 
                 Z2 *= delta
 
-            return ((Z2-1)/-2)+0
+            return ((Z2 - 1) / -2) + 0
 
         else:
-            raise RuntimeError(
-                "Incorrect number of k-points in vasp2trace output.")
+            raise RuntimeError("Incorrect number of k-points in vasp2trace output.")
 
     def _get_band_subspace(self, tol=0.2):
         """
@@ -416,26 +415,26 @@ class BandParity(MSONable):
 
         """
 
-        points = [num for num in self.v2t_output['up'].traces.keys()]
+        points = [num for num in self.v2t_output["up"].traces.keys()]
 
         for point in points:
-            band_data = self.v2t_output['up'].traces[point]
-            nbands = len(self.v2t_output['up'].traces[point])
+            band_data = self.v2t_output["up"].traces[point]
+            nbands = len(self.v2t_output["up"].traces[point])
 
             delta_e = np.zeros(nbands)
 
-            for band_num in range(nbands-1):
-                diff = abs(band_data[band_num+1][2] - band_data[band_num][2])
+            for band_num in range(nbands - 1):
+                diff = abs(band_data[band_num + 1][2] - band_data[band_num][2])
                 delta_e[band_num] += diff
 
-        delta_e = delta_e/len(points)
+        delta_e = delta_e / len(points)
 
         max_diff = delta_e[0]
         for ind in range(nbands):
-            if delta_e[ind]-max_diff >= tol:
+            if delta_e[ind] - max_diff >= tol:
                 max_diff = delta_e[ind]
 
-        return np.argwhere(delta_e == max_diff)[0][0]+1
+        return np.argwhere(delta_e == max_diff)[0][0] + 1
 
     @staticmethod
     def screen_semimetal(trim_parities):
@@ -453,9 +452,10 @@ class BandParity(MSONable):
         # Count total number of odd parity states over all TRIMs
         num_odd_states = 0
 
-        for trim_label, band_parities in trim_parities['up'].items():
-            num_odd_at_trim = np.sum(np.fromiter(
-                (1 for i in band_parities if i < 0), dtype=int))
+        for trim_label, band_parities in trim_parities["up"].items():
+            num_odd_at_trim = np.sum(
+                np.fromiter((1 for i in band_parities if i < 0), dtype=int)
+            )
 
             num_odd_states += num_odd_at_trim
 
@@ -483,8 +483,11 @@ class BandParity(MSONable):
 
         """
 
-        mag_screen = {"insulator": False,
-                      "polarization_bqhc": False, "magnetoelectric": False}
+        mag_screen = {
+            "insulator": False,
+            "polarization_bqhc": False,
+            "magnetoelectric": False,
+        }
 
         # Count total number of odd parity states over all TRIMs
         num_odd_states = 0
@@ -492,10 +495,11 @@ class BandParity(MSONable):
         # Check if any individual TRIM pt has an odd num of odd states
         odd_total_at_trim = False
 
-        for spin in ['up', 'down']:
+        for spin in ["up", "down"]:
             for trim_label, band_parities in trim_parities[spin].items():
-                num_odd_at_trim = np.sum(np.fromiter(
-                    (1 for i in band_parities if i < 0), dtype=int))
+                num_odd_at_trim = np.sum(
+                    np.fromiter((1 for i in band_parities if i < 0), dtype=int)
+                )
 
                 num_odd_states += num_odd_at_trim
 
@@ -531,9 +535,16 @@ class BandParity(MSONable):
 
 
 class StructureDimensionality(MSONable):
-    def __init__(self, structure, structure_graph=None, larsen_dim=None, cheon_dim=None, gorai_dim=None):
+    def __init__(
+        self,
+        structure,
+        structure_graph=None,
+        larsen_dim=None,
+        cheon_dim=None,
+        gorai_dim=None,
+    ):
         """
-        This class uses 3 algorithms implemented in pymatgen to automate recognition of layered materials.
+        This class uses 3 algorithms implemented in pymatgen to automate recognition of low-dimensional materials.
 
         Args:
             structure (object): pmg Structure object.
@@ -559,30 +570,25 @@ class StructureDimensionality(MSONable):
 
         self.structure_graph = sgraph
 
-        # Get all dimensionality defintions
-        self._get_structure_dimensionality()
-
-    def _get_structure_dimensionality(self):
-        """Structure dim according to 3 different algorithms.
-
-        Returns:
-            None: (sets self.dim instance variables).
-
-        """
-
+        # Get Larsen dimensionality
         self.larsen_dim = get_dimensionality_larsen(self.structure_graph)
 
-        # Use 3x3x3 supercell for Cheon dim
-        cheon_dim_str = get_dimensionality_cheon(
-            self.structure, larger_cell=True)
+    def get_cheon_gorai_dim(self):
+        """Convenience method for getting Cheon and Gorai dims. These algorithms take some time.
 
-        if cheon_dim_str == '0D':
+        Returns:
+            None: (sets instance variables).
+
+        """
+        cheon_dim_str = get_dimensionality_cheon(self.structure)
+
+        if cheon_dim_str == "0D":
             cheon_dim = 0
-        elif cheon_dim_str == '1D':
+        elif cheon_dim_str == "1D":
             cheon_dim = 1
-        elif cheon_dim_str == '2D':
+        elif cheon_dim_str == "2D":
             cheon_dim = 2
-        elif cheon_dim_str == '3D':
+        elif cheon_dim_str == "3D":
             cheon_dim = 3
         else:
             cheon_dim = None
