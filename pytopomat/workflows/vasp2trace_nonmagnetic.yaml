@@ -7,6 +7,6 @@ fireworks:
   params:
     parents: 1
     mode: line
-- fw: pytopomat.vasp.workflows.fireworks.Vasp2TraceFW
+- fw: pytopomat.workflows.fireworks.Vasp2TraceFW
   params:
     parents: 2
