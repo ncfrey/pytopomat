@@ -196,21 +196,21 @@ class Z2PackWF:
         ncl_magmoms = " ".join(ncl_magmoms)
 
         opt_fw = OptimizeFW(
-            self.structure, vasp_cmd=c["VASP_CMD"], db_file=c["DB_FILE"]
+            self.structure, vasp_cmd=vasp_cmd, db_file=db_file
         )
 
         static_fw = StaticFW(
             self.structure,
-            vasp_cmd=c["VASP_CMD"],
-            db_file=c["DB_FILE"],
+            vasp_cmd=vasp_cmd,
+            db_file=db_file,
             parents=[opt_fw],
         )
 
         z2pack_fw = Z2PackFW(
             parents=[opt_fw, static_fw],
             structure=self.structure,
-            vasp_cmd=c["VASP_CMD"],
-            db_file=c["DB_FILE"],
+            vasp_cmd=vasp_cmd,
+            db_file=db_file,
         )
 
         fws = [opt_fw, static_fw, z2pack_fw]
