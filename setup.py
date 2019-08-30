@@ -20,6 +20,9 @@ setuptools.setup(
         "pymatgen>=2019.6.5",
         "numpy>=1.16.4",
         "monty>=2.0.4",
+        "atomate>=0.9.3",
+        "custodian>=2019.8.24",
+        "FireWorks>=1.9.4"
     ],
     keywords=["VASP", "topology", "topological", "materials", "science", "DFT"],
     classifiers=[

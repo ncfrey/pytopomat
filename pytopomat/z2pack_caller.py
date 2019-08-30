@@ -8,7 +8,7 @@ This module offers a high level framework for analyzing topological materials in
 __author__ = "Nathan C. Frey, Jason Munro"
 __copyright__ = "MIT License"
 __version__ = "0.0.1"
-__maintainer__ = "Nathan C. Frey, Jason, Munro"
+__maintainer__ = "Nathan C. Frey, Jason Munro"
 __email__ = "ncfrey@lbl.gov, jmunro@lbl.gov"
 __status__ = "Development"
 __date__ = "August 2019"
@@ -19,7 +19,7 @@ class Z2PackCaller:
         self,
         input_dir="input",
         surface=lambda t1, t2: [t1, t2, 0],
-        vasp_cmd="srun vasp_std >& log",
+        vasp_cmd="srun vasp_ncl >& log",
     ):
         """A class for analyzing band structure topology and diagnosing non-trivial topological phases.
 
