@@ -156,7 +156,7 @@ def wf_vasp2trace_nonmagnetic(structure, c=None):
 
 
 class Z2PackWF:
-    def __init__(self, structure):
+    def __init__(self, structure, vasp_cmd=VASP_CMD, db_file=DB_FILE, name="Z2Pack WF"):
         """
       ***VASP_CMD in my_fworker.yaml MUST be set to "vasp_ncl" for Z2Pack.
 
@@ -179,7 +179,7 @@ class Z2PackWF:
 
         """
 
-        c = c or {}
+        c = c or {"VASP_CMD": VASP_CMD, "DB_FILE": DB_FILE}
         vasp_cmd = c.get("VASP_CMD", VASP_CMD)
         db_file = c.get("DB_FILE", DB_FILE)
 
