@@ -237,7 +237,7 @@ class Z2PackWF:
                         "IBRION": 2,
                         "NSW": 100,
                     }
-                }
+                },
                 fw_name_constraint="structure optimization",
             )
 
@@ -247,7 +247,7 @@ class Z2PackWF:
                     "incar_update": {
                         "IVDW": 11
                     }
-                }
+                },
                 fw_name_constraint=["static", "z2pack"],
             )
 
