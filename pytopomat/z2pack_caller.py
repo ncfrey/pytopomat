@@ -90,6 +90,9 @@ class Z2PackCaller:
         system = self.system
         surface = self.surface
 
+        # Label kx, ky, kz TRI surface
+        surf_str = ''.join([str(int(elem)) for elem in self.surface(2, 1)]) 
+
         # z2 calculation defaults
         z2d = {
             "pos_tol": 0.01,  # change in Wannier charge center pos
@@ -99,8 +102,8 @@ class Z2PackCaller:
             "min_neighbour_dist": 0.01,  # Min dist between lines
             "iterator": range(8, 27, 2),  # Num of kpts to iterate over
             "load": True,  # Start from most recent calc
-            "save_file": "z2run.json",
-        }  # Serialize results
+            #"save_file": surf_str + "_z2run.json",  # Serialize results
+        }
 
         # User defined setting updates to defaults
         if z2_settings:
