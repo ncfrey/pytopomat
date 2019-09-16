@@ -209,6 +209,7 @@ class Z2PackWF:
         z2pack_fw = Z2PackFW(
             parents=[opt_fw, static_fw],
             structure=self.structure,
+            uuid=self.uuid,
             vasp_cmd=c["VASP_CMD"],
             db_file=c["DB_FILE"],
         )

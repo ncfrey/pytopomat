@@ -267,6 +267,8 @@ class WriteWannier90Win(FiretaskBase):
         db_file (str): path to the db file
     """
 
+    required_params = ["wf_uuid"]
+    
     optional_params = ["db_file"]
 
     def run_task(self, fw_spec):

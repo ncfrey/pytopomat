@@ -83,6 +83,7 @@ class Z2PackFW(Firework):
         self,
         parents=None,
         structure=None,
+        uuid=None,
         name="z2pack",
         db_file=None,
         prev_calc_dir=None,
@@ -95,6 +96,7 @@ class Z2PackFW(Firework):
 
         Args:
             structure (Structure): Structure object.
+            uuid (str): Unique wf identifier.
             name (str): name of this FW
             db_file (str): path to the db file
             parents (Firework): Parents of this particular Firework. FW or list of FWS.
@@ -124,7 +126,7 @@ class Z2PackFW(Firework):
         else:
             raise ValueError("Must specify structure or previous calculation")
 
-        t.append(WriteWannier90Win())
+        t.append(WriteWannier90Win(wf_uuid=uuid))
 
         # Run Z2Pack on 6 TRI planes in the BZ
         surfaces = [
