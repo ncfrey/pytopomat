@@ -236,9 +236,20 @@ class Z2PackWF:
                         "IBRION": 2,
                         "NSW": 100,
                     }
-                },
+                }
                 fw_name_constraint="structure optimization",
             )
+
+            wf = add_modify_incar(
+                wf,
+                modify_incar_params={
+                    "incar_update": {
+                        "IVDW": 11
+                    }
+                }
+                fw_name_constraint=["static", "z2pack"],
+            )
+
         else:
             wf = add_modify_incar(
                 wf,

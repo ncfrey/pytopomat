@@ -268,14 +268,14 @@ class WriteWannier90Win(FiretaskBase):
     """
 
     required_params = ["wf_uuid"]
-    
+
     optional_params = ["db_file"]
 
     def run_task(self, fw_spec):
 
         # Get num of electrons and bands from static calc
         uuid = self["wf_uuid"]
-        db_file = db_file = env_chk(self.get("db_file"), fw_spec)
+        db_file = env_chk(self.get("db_file"), fw_spec)
         db = VaspCalcDb.from_db_file(db_file, admin=True)
         db.collection = db.db["tasks"]
 
