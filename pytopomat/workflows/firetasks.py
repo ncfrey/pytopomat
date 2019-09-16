@@ -278,7 +278,7 @@ class WriteWannier90Win(FiretaskBase):
         db = VaspCalcDb.from_db_file(db_file, admin=True)
         db.collection = db.db["tasks"]
 
-        task_doc = db.collection.find(
+        task_doc = db.collection.find_one(
             {"wf_meta.wf_uuid": uuid, "task_label": "static"}, ["input.parameters"]
         )
 
@@ -287,7 +287,7 @@ class WriteWannier90Win(FiretaskBase):
 
         w90_file = [
             "num_wann = %d" % (nelec),
-            "num_bands = %d" % (nelec),
+            "num_bands = %d" % (nelec),  # 1 band / elec with SOC
             "spinors=.true.",
             "num_iter 0",
             "shell_list 1" "exclude_bands %d-%d" % (nelec + 1, nbands),
