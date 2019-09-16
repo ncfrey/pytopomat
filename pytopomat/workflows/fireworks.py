@@ -126,7 +126,7 @@ class Z2PackFW(Firework):
         else:
             raise ValueError("Must specify structure or previous calculation")
 
-        t.append(WriteWannier90Win(wf_uuid=uuid))
+        t.append(WriteWannier90Win(wf_uuid=uuid, db_file=db_file))
 
         # Run Z2Pack on 6 TRI planes in the BZ
         surfaces = [

@@ -219,6 +219,7 @@ class Z2PackWF:
         wf = Workflow(fws)
         wf = add_additional_fields_to_taskdocs(wf, {"wf_meta": self.wf_meta})
 
+        # Add vdW corrections if structure is layered
         dim_data = StructureDimensionality(self.structure)
 
         if np.any(
@@ -259,6 +260,7 @@ class Z2PackWF:
                 fw_name_constraint="structure optimization",
             )
 
+        # Helpful vasp settings
         wf = add_modify_incar(
             wf,
             modify_incar_params={
