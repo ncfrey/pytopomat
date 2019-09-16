@@ -102,7 +102,7 @@ class Z2PackCaller:
             "min_neighbour_dist": 0.01,  # Min dist between lines
             "iterator": range(8, 27, 2),  # Num of kpts to iterate over
             "load": True,  # Start from most recent calc
-            #"save_file": surf_str + "_z2run.json",  # Serialize results
+            "save_file": surf_str + "_z2run.json",  # Serialize results
         }
 
         # User defined setting updates to defaults
@@ -121,7 +121,7 @@ class Z2PackCaller:
             num_lines=z2d["num_lines"],
             min_neighbour_dist=z2d["min_neighbour_dist"],
             iterator=z2d["iterator"],
-            save_file=z2d["save_file"],
+            #save_file=z2d["save_file"],
         )
 
         self.output = Z2Output(result, surface)
