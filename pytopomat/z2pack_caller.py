@@ -64,10 +64,11 @@ class Z2PackCaller:
         # Create a Brillouin zone surface for calculating the Wilson loop / Wannier charge centers (defaults to k_z = 0 surface)
         self.surface = surface
         self.surface_label = surface_label
+        self.input_dir = input_dir
 
         # Define input file locations
         input_files = ["CHGCAR", "INCAR", "POSCAR", "POTCAR", "wannier90.win"]
-        input_files = [input_dir + "/" + s for s in input_files]
+        input_files = [self.input_dir + "/" + s for s in input_files]
 
         # Create k-point inputs for VASP
         kpt_fct = z2pack.fp.kpoint.vasp

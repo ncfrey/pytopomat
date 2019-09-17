@@ -130,6 +130,7 @@ class Z2PackFW(Firework):
 
         # Copy files to a folder called 'input' for z2pack
         files_to_copy = ['CHGCAR', 'INCAR', 'POSCAR', 'POTCAR', 'wannier90.win']
+        t.append(CopyFiles(from_dir='./', to_dir='input', files_to_copy=files_to_copy))
 
         # Run Z2Pack on 6 TRI planes in the BZ
         surfaces = [
