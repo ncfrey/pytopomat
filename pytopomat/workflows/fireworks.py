@@ -142,7 +142,7 @@ class Z2PackFW(Firework):
             lambda s, t: [s / 2, t, 0.5],
         ]
 
-        surface_labels = [''.join([str(int(elem)) for elem in surface]) for surf in surfaces] 
+        surface_labels = [''.join([str(int(elem)) for elem in surface]) for surface in surfaces] 
 
         for surface, surface_label in zip(surfaces, surface_labels):
             t.append(RunZ2Pack(surface=surface, surface_label=surface_label))
