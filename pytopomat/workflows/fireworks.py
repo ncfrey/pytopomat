@@ -5,7 +5,7 @@ from fireworks import Firework
 from pymatgen import Structure
 
 from atomate.vasp.config import VASP_CMD, DB_FILE
-from atomate.common.firetasks.glue_tasks import PassCalcLocs
+from atomate.common.firetasks.glue_tasks import PassCalcLocs, CopyFiles
 from atomate.vasp.firetasks.parse_outputs import VaspToDb
 
 from pytopomat.workflows.firetasks import (
@@ -128,6 +128,9 @@ class Z2PackFW(Firework):
 
         t.append(WriteWannier90Win(wf_uuid=uuid, db_file=db_file))
 
+        # Copy files to a folder called 'input' for z2pack
+        files_to_copy = ['CHGCAR', 'INCAR', 'POSCAR', 'POTCAR', 'wannier90.win']
+
         # Run Z2Pack on 6 TRI planes in the BZ
         surfaces = [
             lambda s, t: [0, s / 2, t],
@@ -138,8 +141,10 @@ class Z2PackFW(Firework):
             lambda s, t: [s / 2, t, 0.5],
         ]
 
-        for surface in surfaces:
-            t.append(RunZ2Pack(surface=surface))
+        surface_labels = [''.join([str(int(elem)) for elem in surface]) for surf in surfaces] 
+
+        for surface, surface_label in zip(surfaces, surface_labels):
+            t.append(RunZ2Pack(surface=surface, surface_label=surface_label))
 
         t.extend(
             [

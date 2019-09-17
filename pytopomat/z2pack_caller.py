@@ -18,7 +18,8 @@ class Z2PackCaller:
     def __init__(
         self,
         input_dir="input",
-        surface=lambda t1, t2: [t1, t2, 0],
+        surface=lambda t1, t2: [t1/2, t2, 0],
+        surface_label="110",
         vasp_cmd="srun vasp_ncl >& log",
     ):
         """A class for analyzing band structure topology and diagnosing non-trivial topological phases.
@@ -48,6 +49,7 @@ class Z2PackCaller:
         Parameters:
             system (z2pack System object): Configuration for dynamically calling vasp within z2pack.
             surface (lambda function): Parameterizes surface in Brillouin zone.
+            surface_label (str): Labels the surface, e.g. [t1/2, t2, 0] <-> "110".
 
         This module makes extensive use of the z2pack tool for calculating topological invariants to identify topological phases. It is mainly meant to be used in band structure workflows for high throughput classification of band topology.
 
@@ -61,6 +63,7 @@ class Z2PackCaller:
 
         # Create a Brillouin zone surface for calculating the Wilson loop / Wannier charge centers (defaults to k_z = 0 surface)
         self.surface = surface
+        self.surface_label = surface_label
 
         # Define input file locations
         input_files = ["CHGCAR", "INCAR", "POSCAR", "POTCAR", "wannier90.win"]
@@ -90,9 +93,6 @@ class Z2PackCaller:
         system = self.system
         surface = self.surface
 
-        # Label kx, ky, kz TRI surface
-        surf_str = ''.join([str(int(elem)) for elem in self.surface(2, 1)]) 
-
         # z2 calculation defaults
         z2d = {
             "pos_tol": 0.01,  # change in Wannier charge center pos
@@ -102,7 +102,7 @@ class Z2PackCaller:
             "min_neighbour_dist": 0.01,  # Min dist between lines
             "iterator": range(8, 27, 2),  # Num of kpts to iterate over
             "load": True,  # Start from most recent calc
-            "save_file": surf_str + "_z2run.json",  # Serialize results
+            "save_file": self.surface_label + "_z2run.json",  # Serialize results
         }
 
         # User defined setting updates to defaults

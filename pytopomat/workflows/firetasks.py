@@ -208,14 +208,15 @@ class RunZ2Pack(FiretaskBase):
 
     required_params:
         surface (function): lambda function specifying BZ surface.
+        surface_label (str): TRIM surface, e.g. 011 or 101
 
     """
 
-    required_params = ["surface"]
+    required_params = ["surface", "surface_label"]
 
     def run_task(self, fw_spec):
 
-        z2pc = Z2PackCaller(input_dir=os.getcwd(), surface=self["surface"])
+        z2pc = Z2PackCaller(input_dir=os.getcwd(), surface=self["surface"], surface_label=self["surface_label"])
 
         z2pc.run(z2_settings=None)
 
