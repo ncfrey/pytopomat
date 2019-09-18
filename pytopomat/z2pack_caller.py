@@ -18,8 +18,7 @@ class Z2PackCaller:
     def __init__(
         self,
         input_dir="input",
-        surface=lambda t1, t2: [t1/2, t2, 0],
-        surface_label="110",
+        surface="kz_0",
         vasp_cmd="srun vasp_ncl >& log",
     ):
         """A class for analyzing band structure topology and diagnosing non-trivial topological phases.
@@ -48,8 +47,7 @@ class Z2PackCaller:
 
         Parameters:
             system (z2pack System object): Configuration for dynamically calling vasp within z2pack.
-            surface (lambda function): Parameterizes surface in Brillouin zone.
-            surface_label (str): Labels the surface, e.g. [t1/2, t2, 0] <-> "110".
+            surface (str): Labels the surface, e.g. [t1/2, t2, 0] <-> "kz_0".
 
         This module makes extensive use of the z2pack tool for calculating topological invariants to identify topological phases. It is mainly meant to be used in band structure workflows for high throughput classification of band topology.
 
@@ -62,8 +60,23 @@ class Z2PackCaller:
         """
 
         # Create a Brillouin zone surface for calculating the Wilson loop / Wannier charge centers (defaults to k_z = 0 surface)
-        self.surface = surface
-        self.surface_label = surface_label
+        surfaces = {"kx_0":
+            lambda s, t: [0, s / 2, t],
+            "kx_1":
+            lambda s, t: [0.5, s / 2, t],
+            "ky_0":
+            lambda s, t: [s / 2, 0, t],
+            "ky_1":
+            lambda s, t: [s / 2, 0.5, t],
+            "kz_0":
+            lambda s, t: [s / 2, t, 0],
+            "kz_1":
+            lambda s, t: [s / 2, t, 0.5],
+        }
+
+        # Surface label -> lambda function parameterization
+        self.surface = surfaces[surface]
+        self.surface_label = surface  # str label
         self.input_dir = input_dir
 
         # Define input file locations
@@ -91,9 +104,6 @@ class Z2PackCaller:
 
         """
 
-        system = self.system
-        surface = self.surface
-
         # z2 calculation defaults
         z2d = {
             "pos_tol": 0.01,  # change in Wannier charge center pos
@@ -114,18 +124,19 @@ class Z2PackCaller:
 
         # Calculate WCC on the Brillouin zone surface.
         result = z2pack.surface.run(
-            system=system,
-            surface=surface,
+            system=self.system,
+            surface=self.surface,
             pos_tol=z2d["pos_tol"],
             gap_tol=z2d["gap_tol"],
             move_tol=z2d["move_tol"],
             num_lines=z2d["num_lines"],
             min_neighbour_dist=z2d["min_neighbour_dist"],
             iterator=z2d["iterator"],
-            #save_file=z2d["save_file"],
+            load=z2d["load"],
+            save_file=z2d["save_file"],
         )
 
-        self.output = Z2Output(result, surface)
+        self.output = Z2Output(result, self.surface)
 
 
 class Z2Output(MSONable):

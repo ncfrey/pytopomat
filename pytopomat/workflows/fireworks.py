@@ -134,19 +134,10 @@ class Z2PackFW(Firework):
         t.append(SetUpZ2Pack())
 
         # Run Z2Pack on 6 TRI planes in the BZ
-        surfaces = [
-            lambda s, t: [0, s / 2, t],
-            lambda s, t: [0.5, s / 2, t],
-            lambda s, t: [s / 2, 0, t],
-            lambda s, t: [s / 2, 0.5, t],
-            lambda s, t: [s / 2, t, 0],
-            lambda s, t: [s / 2, t, 0.5],
-        ]
+        surfaces = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
 
-        surface_labels = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
-
-        for surface, surface_label in zip(surfaces, surface_labels):
-            t.append(RunZ2Pack(surface=surface, surface_label=surface_label))
+        for surface in surfaces:
+            t.append(RunZ2Pack(surface=surface))
 
         t.extend(
             [

@@ -222,19 +222,17 @@ class RunZ2Pack(FiretaskBase):
     Call Z2Pack.
 
     required_params:
-        surface (function): lambda function specifying BZ surface.
-        surface_label (str): TRIM surface, e.g. 011 or 101
+        surface (str): TRIM surface, e.g. k_x = 0 or k_x = 1/2.
 
     """
 
-    required_params = ["surface", "surface_label"]
+    required_params = ["surface"]
 
     def run_task(self, fw_spec):
 
         z2pc = Z2PackCaller(
             input_dir="input",
-            surface=self["surface"],
-            surface_label=self["surface_label"],
+            surface=self["surface"]
         )
 
         z2pc.run(z2_settings=None)
@@ -310,7 +308,8 @@ class WriteWannier90Win(FiretaskBase):
             "num_bands = %d" % (nelec),  # 1 band / elec with SOC
             "spinors=.true.",
             "num_iter 0",
-            "shell_list 1" "exclude_bands %d-%d" % (nelec + 1, nbands),
+            "shell_list 1",
+            "exclude_bands %d-%d" % (nelec + 1, nbands),
         ]
 
         w90_file = "\n".join(w90_file)
