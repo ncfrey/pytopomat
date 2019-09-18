@@ -6,6 +6,8 @@ import re
 
 from monty.json import MontyEncoder, jsanitize
 
+from pymatgen.core.structure import Structure
+
 from pytopomat.analyzer import Vasp2TraceCaller, Vasp2TraceOutput
 from pytopomat.z2pack_caller import Z2PackCaller, Z2Output
 
@@ -38,9 +40,13 @@ class Vasp2TraceToDb(FiretaskBase):
 
     def run_task(self, fw_spec):
 
-        d = self["vasp2trace_out"] or fw_spec["vasp2trace_out"]
+        v2t = self["vasp2trace_out"] or fw_spec["vasp2trace_out"]
 
-        d = jsanitize(d)
+        v2t = jsanitize(v2t)
+
+        d = {"formula": fw_spec["formula"],
+             "structure": fw_spec["structure"], 
+             "vasp2trace": v2t}
 
         # store the results
         db_file = env_chk(self.get("db_file"), fw_spec)
@@ -64,11 +70,22 @@ class RunVasp2Trace(FiretaskBase):
 
     def run_task(self, fw_spec):
 
-        Vasp2TraceCaller(os.getcwd())
+        wd = os.getcwd()
+        Vasp2TraceCaller(wd)
 
-        data = Vasp2TraceOutput(os.getcwd() + "/trace.txt")
+        try:
+            raw_struct = Structure.from_file(wd+"/POSCAR")
+            formula = raw_struct.composition.formula
+            structure = raw_struct.as_dict()
 
-        return FWAction(update_spec={"vasp2trace_out": data.as_dict()})
+        except:
+            composition = None
+            structure = None
+
+        data = Vasp2TraceOutput(wd+"/trace.txt")
+
+        return FWAction(update_spec={"vasp2trace_out": data.as_dict(),
+                                     "structure": structure, "formula": formula})
 
 
 @explicit_serialize

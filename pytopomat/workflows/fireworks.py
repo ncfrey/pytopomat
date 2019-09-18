@@ -54,7 +54,7 @@ class Vasp2TraceFW(Firework):
             t.append(
                 CopyVaspOutputs(
                     calc_dir=prev_calc_dir,
-                    additional_files=["CHGCAR", "WAVECAR"],
+                    additional_files=["CHGCAR", "WAVECAR", "PROCAR"],
                     contcar_to_poscar=True,
                 )
             )
@@ -62,7 +62,7 @@ class Vasp2TraceFW(Firework):
             t.append(
                 CopyVaspOutputs(
                     calc_loc=True,
-                    additional_files=["CHGCAR", "WAVECAR"],
+                    additional_files=["CHGCAR", "WAVECAR", "PROCAR"],
                     contcar_to_poscar=True,
                 )
             )
