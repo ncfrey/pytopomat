@@ -200,17 +200,19 @@ class CopyVaspOutputs(CopyFiles):
                     f.close()
                 os.remove(dest_path + gz_ext)
 
+
 @explicit_serialize
 class SetUpZ2Pack(FiretaskBase):
-    """
-    Set up input files for a z2pack run.
-
-    """
+    """Set up input files for a z2pack run."""
 
     def run_task(self, fw_spec):
 
-        # Copy files to a folder called 'input' for z2pack
-        files_to_copy = ['CHGCAR', 'INCAR', 'POSCAR', 'POTCAR', 'wannier90.win']
+        files_to_copy = ["CHGCAR", "INCAR", "POSCAR", "POTCAR", "wannier90.win"]
+
+        os.mkdir("input")
+        CopyFiles(from_dir="./", to_dir="input", files_to_copy=files_to_copy)
+
+        return FWAction()
 
 
 @explicit_serialize
@@ -228,7 +230,11 @@ class RunZ2Pack(FiretaskBase):
 
     def run_task(self, fw_spec):
 
-        z2pc = Z2PackCaller(input_dir=os.getcwd(), surface=self["surface"], surface_label=self["surface_label"])
+        z2pc = Z2PackCaller(
+            input_dir="input",
+            surface=self["surface"],
+            surface_label=self["surface_label"],
+        )
 
         z2pc.run(z2_settings=None)
 

@@ -243,21 +243,13 @@ class Z2PackWF:
 
             wf = add_modify_incar(
                 wf,
-                modify_incar_params={
-                    "incar_update": {
-                        "IVDW": 11
-                    }
-                },
+                modify_incar_params={"incar_update": {"IVDW": 11}},
                 fw_name_constraint="static",
             )
 
             wf = add_modify_incar(
                 wf,
-                modify_incar_params={
-                    "incar_update": {
-                        "IVDW": 11
-                    }
-                },
+                modify_incar_params={"incar_update": {"IVDW": 11}},
                 fw_name_constraint="z2pack",
             )
 

@@ -130,9 +130,8 @@ class Z2PackFW(Firework):
 
         t.append(WriteWannier90Win(wf_uuid=uuid, db_file=db_file))
 
-        
-        t.append()
-        t.append(CopyFiles(from_dir='./', to_dir='input', files_to_copy=files_to_copy))
+        # Copy files to a folder called 'input' for z2pack
+        t.append(SetUpZ2Pack())
 
         # Run Z2Pack on 6 TRI planes in the BZ
         surfaces = [
@@ -144,7 +143,7 @@ class Z2PackFW(Firework):
             lambda s, t: [s / 2, t, 0.5],
         ]
 
-        surface_labels = ['kx_0', 'kx_1', 'ky_0', 'ky_1', 'kz_0', 'kz_1']
+        surface_labels = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
 
         for surface, surface_label in zip(surfaces, surface_labels):
             t.append(RunZ2Pack(surface=surface, surface_label=surface_label))
