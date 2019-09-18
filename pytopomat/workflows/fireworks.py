@@ -107,6 +107,7 @@ class Z2PackFW(Firework):
         """
 
         self.structure = structure
+        nsites = len(self.structure.sites)
 
         # Check for magmoms
         if "magmom" in self.structure.site_properties:
