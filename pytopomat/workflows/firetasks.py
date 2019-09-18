@@ -210,7 +210,8 @@ class SetUpZ2Pack(FiretaskBase):
         files_to_copy = ["CHGCAR", "INCAR", "POSCAR", "POTCAR", "wannier90.win"]
 
         os.mkdir("input")
-        CopyFiles(from_dir="./", to_dir="input", files_to_copy=files_to_copy)
+        for file in files_to_copy:
+            shutil.move(file, "input")
 
         return FWAction()
 
