@@ -105,6 +105,19 @@ class Z2PackFW(Firework):
             prev_calc_dir (str): Path to a previous calculation to copy from
             \*\*kwargs: Other kwargs that are passed to Firework.__init__.
         """
+
+        self.structure = structure
+
+        # Check for magmoms
+        if "magmom" in self.structure.site_properties:
+            l = [[0.0, 0.0, m] for m in self.structure.site_properties["magmom"]]
+            ncl_magmoms = [elem for ll in l for elem in ll]
+        else:
+            ncl_magmoms = 3 * nsites * [0.0]
+
+        ncl_magmoms = [str(m) for m in ncl_magmoms]
+        ncl_magmoms = " ".join(ncl_magmoms)
+
         fw_name = "{}-{}".format(
             structure.composition.reduced_formula if structure else "unknown", name
         )
@@ -131,7 +144,7 @@ class Z2PackFW(Firework):
         t.append(WriteWannier90Win(wf_uuid=uuid, db_file=db_file))
 
         # Copy files to a folder called 'input' for z2pack
-        t.append(SetUpZ2Pack())
+        t.append(SetUpZ2Pack(ncl_magmoms=ncl_magmoms))
 
         # Run Z2Pack on 6 TRI planes in the BZ
         surfaces = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
@@ -139,11 +152,6 @@ class Z2PackFW(Firework):
         for surface in surfaces:
             t.append(RunZ2Pack(surface=surface))
 
-        t.extend(
-            [
-                PassCalcLocs(name=name),
-                Z2PackToDb(db_file=db_file, z2pack_out=z2pack_out),
-            ]
-        )
+        t.extend([PassCalcLocs(name=name), Z2PackToDb(db_file=db_file)])
 
         super().__init__(t, parents=parents, name=fw_name, **kwargs)

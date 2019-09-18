@@ -185,16 +185,6 @@ class Z2PackWF:
 
         nsites = len(self.structure.sites)
 
-        # Check for magmoms
-        if "magmom" in self.structure.site_properties:
-            l = [[0.0, 0.0, m] for m in self.structure.site_properties["magmom"]]
-            ncl_magmoms = [elem for ll in l for elem in ll]
-        else:
-            ncl_magmoms = 3 * nsites * [0.0]
-
-        ncl_magmoms = [str(m) for m in ncl_magmoms]
-        ncl_magmoms = " ".join(ncl_magmoms)
-
         opt_fw = OptimizeFW(
             self.structure, vasp_cmd=c["VASP_CMD"], db_file=c["DB_FILE"]
         )
@@ -275,29 +265,6 @@ class Z2PackWF:
             wf,
             modify_incar_params={"incar_update": {"PREC": "Accurate"}},
             fw_name_constraint="static",
-        )
-
-        # Z2Pack incar
-        wf = add_modify_incar(
-            wf,
-            modify_incar_params={
-                "incar_update": {
-                    "PREC": "Accurate",
-                    "LSORBIT": ".TRUE.",
-                    "GGA_COMPAT": ".FALSE.",
-                    "LASPH": ".TRUE.",
-                    "ISMEAR": 0,
-                    "SIGMA": 0.05,
-                    "ISYM": -1,
-                    "LPEAD": ".FALSE.",
-                    "LWANNIER90": ".TRUE.",
-                    "LWRITE_MMN_AMN": ".TRUE.",
-                    "LWAVE": ".FALSE.",
-                    "ICHARG": 11,
-                    "MAGMOM": "%s" % ncl_magmoms,
-                }
-            },
-            fw_name_constraint="z2pack",
         )
 
         wf = add_common_powerups(wf, c)

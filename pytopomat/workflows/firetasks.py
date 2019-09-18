@@ -7,6 +7,7 @@ import re
 from monty.json import MontyEncoder, jsanitize
 
 from pymatgen.core.structure import Structure
+from pymatgen.io.vasp import Incar
 
 from pytopomat.analyzer import Vasp2TraceCaller, Vasp2TraceOutput
 from pytopomat.z2pack_caller import Z2PackCaller, Z2Output
@@ -44,9 +45,11 @@ class Vasp2TraceToDb(FiretaskBase):
 
         v2t = jsanitize(v2t)
 
-        d = {"formula": fw_spec["formula"],
-             "structure": fw_spec["structure"], 
-             "vasp2trace": v2t}
+        d = {
+            "formula": fw_spec["formula"],
+            "structure": fw_spec["structure"],
+            "vasp2trace": v2t,
+        }
 
         # store the results
         db_file = env_chk(self.get("db_file"), fw_spec)
@@ -74,7 +77,7 @@ class RunVasp2Trace(FiretaskBase):
         Vasp2TraceCaller(wd)
 
         try:
-            raw_struct = Structure.from_file(wd+"/POSCAR")
+            raw_struct = Structure.from_file(wd + "/POSCAR")
             formula = raw_struct.composition.formula
             structure = raw_struct.as_dict()
 
@@ -82,10 +85,15 @@ class RunVasp2Trace(FiretaskBase):
             composition = None
             structure = None
 
-        data = Vasp2TraceOutput(wd+"/trace.txt")
+        data = Vasp2TraceOutput(wd + "/trace.txt")
 
-        return FWAction(update_spec={"vasp2trace_out": data.as_dict(),
-                                     "structure": structure, "formula": formula})
+        return FWAction(
+            update_spec={
+                "vasp2trace_out": data.as_dict(),
+                "structure": structure,
+                "formula": formula,
+            }
+        )
 
 
 @explicit_serialize
@@ -220,9 +228,41 @@ class CopyVaspOutputs(CopyFiles):
 
 @explicit_serialize
 class SetUpZ2Pack(FiretaskBase):
-    """Set up input files for a z2pack run."""
+    """
+    Set up input files for a z2pack run.
+
+    required_params:
+        ncl_magmoms (str): 3*natoms long array of x,y,z magmoms for each ion.
+
+    """
+
+    required_params = ["ncl_magmoms"]
 
     def run_task(self, fw_spec):
+
+        ncl_magmoms = self["ncl_magmoms"]
+
+        incar = Incar.from_file("INCAR")
+
+        # Modify INCAR for Z2Pack
+        incar_update = {
+            "PREC": "Accurate",
+            "LSORBIT": ".TRUE.",
+            "GGA_COMPAT": ".FALSE.",
+            "LASPH": ".TRUE.",
+            "ISMEAR": 0,
+            "SIGMA": 0.05,
+            "ISYM": -1,
+            "LPEAD": ".FALSE.",
+            "LWANNIER90": ".TRUE.",
+            "LWRITE_MMN_AMN": ".TRUE.",
+            "LWAVE": ".FALSE.",
+            "ICHARG": 11,
+            "MAGMOM": "%s" % ncl_magmoms,
+        }
+
+        incar.update(incar_update)
+        incar.write_file("INCAR")
 
         files_to_copy = ["CHGCAR", "INCAR", "POSCAR", "POTCAR", "wannier90.win"]
 
@@ -247,16 +287,13 @@ class RunZ2Pack(FiretaskBase):
 
     def run_task(self, fw_spec):
 
-        z2pc = Z2PackCaller(
-            input_dir="input",
-            surface=self["surface"]
-        )
+        z2pc = Z2PackCaller(input_dir="input", surface=self["surface"])
 
         z2pc.run(z2_settings=None)
 
         data = z2pc.output
 
-        return FWAction(update_spec={"z2pack_out": data.as_dict()})
+        return FWAction(update_spec={self["surface"]: data.as_dict()})
 
 
 @explicit_serialize
@@ -264,20 +301,17 @@ class Z2PackToDb(FiretaskBase):
     """
     Stores data from running Z2Pack.
 
-    required_params:
-        z2pack_out (Object): Z2Output object.
-
     optional_params:
         db_file (str): path to the db file
     """
 
-    required_params = ["z2pack_out"]
     optional_params = ["db_file"]
 
     def run_task(self, fw_spec):
 
-        d = self["z2pack_out"] or fw_spec["z2pack_out"]
+        surfaces = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
 
+        d = {"z2pack_out": {surface: fw_spec[surface] for surface in surfaces}}
         d = jsanitize(d)
 
         # store the results
@@ -289,7 +323,8 @@ class Z2PackToDb(FiretaskBase):
             db = VaspCalcDb.from_db_file(db_file, admin=True)
             db.collection = db.db["z2pack"]
             db.collection.insert_one(d)
-            logger.info("Z2Pack surface calculation complete.")
+            logger.info("Z2Pack surface calculations complete.")
+
         return FWAction()
 
 

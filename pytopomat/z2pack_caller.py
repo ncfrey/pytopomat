@@ -16,10 +16,7 @@ __date__ = "August 2019"
 
 class Z2PackCaller:
     def __init__(
-        self,
-        input_dir="input",
-        surface="kz_0",
-        vasp_cmd="srun vasp_ncl >& log",
+        self, input_dir="input", surface="kz_0", vasp_cmd="srun vasp_ncl >& log"
     ):
         """A class for analyzing band structure topology and diagnosing non-trivial topological phases.
 
@@ -107,18 +104,13 @@ class Z2PackCaller:
                 z2d.update(d)
 
         # Create a Brillouin zone surface for calculating the Wilson loop / Wannier charge centers (defaults to k_z = 0 surface)
-        surfaces = {"kx_0":
-            lambda s, t: [0, s / 2, t],
-            "kx_1":
-            lambda s, t: [0.5, s / 2, t],
-            "ky_0":
-            lambda s, t: [s / 2, 0, t],
-            "ky_1":
-            lambda s, t: [s / 2, 0.5, t],
-            "kz_0":
-            lambda s, t: [s / 2, t, 0],
-            "kz_1":
-            lambda s, t: [s / 2, t, 0.5],
+        surfaces = {
+            "kx_0": lambda s, t: [0, s / 2, t],
+            "kx_1": lambda s, t: [0.5, s / 2, t],
+            "ky_0": lambda s, t: [s / 2, 0, t],
+            "ky_1": lambda s, t: [s / 2, 0.5, t],
+            "kz_0": lambda s, t: [s / 2, t, 0],
+            "kz_1": lambda s, t: [s / 2, t, 0.5],
         }
 
         # Calculate WCC on the Brillouin zone surface.
