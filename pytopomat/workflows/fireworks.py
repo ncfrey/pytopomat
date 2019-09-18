@@ -1,4 +1,5 @@
 import warnings
+import os
 
 from fireworks import Firework
 
@@ -13,6 +14,7 @@ from pytopomat.workflows.firetasks import (
     RunVasp2Trace,
     CopyVaspOutputs,
     Z2PackToDb,
+    SetUpZ2Pack,
     RunZ2Pack,
     WriteWannier90Win,
 )
@@ -128,8 +130,8 @@ class Z2PackFW(Firework):
 
         t.append(WriteWannier90Win(wf_uuid=uuid, db_file=db_file))
 
-        # Copy files to a folder called 'input' for z2pack
-        files_to_copy = ['CHGCAR', 'INCAR', 'POSCAR', 'POTCAR', 'wannier90.win']
+        
+        t.append()
         t.append(CopyFiles(from_dir='./', to_dir='input', files_to_copy=files_to_copy))
 
         # Run Z2Pack on 6 TRI planes in the BZ
