@@ -59,24 +59,8 @@ class Z2PackCaller:
 
         """
 
-        # Create a Brillouin zone surface for calculating the Wilson loop / Wannier charge centers (defaults to k_z = 0 surface)
-        surfaces = {"kx_0":
-            lambda s, t: [0, s / 2, t],
-            "kx_1":
-            lambda s, t: [0.5, s / 2, t],
-            "ky_0":
-            lambda s, t: [s / 2, 0, t],
-            "ky_1":
-            lambda s, t: [s / 2, 0.5, t],
-            "kz_0":
-            lambda s, t: [s / 2, t, 0],
-            "kz_1":
-            lambda s, t: [s / 2, t, 0.5],
-        }
-
         # Surface label -> lambda function parameterization
-        self.surface = surfaces[surface]
-        self.surface_label = surface  # str label
+        self.surface = surface
         self.input_dir = input_dir
 
         # Define input file locations
@@ -122,10 +106,25 @@ class Z2PackCaller:
                 d = {k: v}
                 z2d.update(d)
 
+        # Create a Brillouin zone surface for calculating the Wilson loop / Wannier charge centers (defaults to k_z = 0 surface)
+        surfaces = {"kx_0":
+            lambda s, t: [0, s / 2, t],
+            "kx_1":
+            lambda s, t: [0.5, s / 2, t],
+            "ky_0":
+            lambda s, t: [s / 2, 0, t],
+            "ky_1":
+            lambda s, t: [s / 2, 0.5, t],
+            "kz_0":
+            lambda s, t: [s / 2, t, 0],
+            "kz_1":
+            lambda s, t: [s / 2, t, 0.5],
+        }
+
         # Calculate WCC on the Brillouin zone surface.
         result = z2pack.surface.run(
             system=self.system,
-            surface=self.surface,
+            surface=surfaces[self.surface],
             pos_tol=z2d["pos_tol"],
             gap_tol=z2d["gap_tol"],
             move_tol=z2d["move_tol"],
@@ -146,7 +145,7 @@ class Z2Output(MSONable):
 
         Args:
             result (object): Output from z2pack.surface.run()
-            surface (list): BZ surface parameterization.
+            surface (str): TRI BZ surface label.
             chern_number (int): Chern number.
             z2_invariant (int): Z2 invariant. 
             
@@ -157,9 +156,9 @@ class Z2Output(MSONable):
         self.chern_number = chern_number
         self.z2_invariant = z2_invariant
 
-        self._parse_result(self, result)
+        self._parse_result(result)
 
-    def _parse_result(self, result, surface):
+    def _parse_result(self, result):
 
         # Topological invariants
         chern_number = z2pack.invariant.chern(result)
@@ -167,7 +166,3 @@ class Z2Output(MSONable):
 
         self.chern_number = chern_number
         self.z2_invariant = z2_invariant
-
-        # BZ surface as a vector
-        surface_vec = surface("t1", "t2")
-        self.surface = surface_vec
