@@ -97,7 +97,7 @@ class Z2PackCaller:
             "min_neighbour_dist": 0.01,  # Min dist between lines
             "iterator": range(8, 27, 2),  # Num of kpts to iterate over
             "load": True,  # Start from most recent calc
-            "save_file": self.surface_label + "_z2run.json",  # Serialize results
+            "save_file": self.surface + "_z2run.json",  # Serialize results
         }
 
         # User defined setting updates to defaults
