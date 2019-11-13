@@ -94,7 +94,7 @@ def wf_vasp2trace_nonmagnetic(structure, c=None):
             },
             {},
         ],
-        vis=MPStaticSet(structure, force_gamma=True),
+        vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
         common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},
     )
 
