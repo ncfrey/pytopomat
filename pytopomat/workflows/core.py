@@ -272,6 +272,8 @@ class Z2PackWF:
 
         wf = add_common_powerups(wf, c)
 
+        wf.name = "{}:{}".format(self.structure.composition.reduced_formula, "z2pack")
+
         if c.get("STABILITY_CHECK", STABILITY_CHECK):
             wf = add_stability_check(wf, fw_name_constraint="structure optimization")
 
