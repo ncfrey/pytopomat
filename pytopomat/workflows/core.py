@@ -156,7 +156,7 @@ def wf_vasp2trace_nonmagnetic(structure, c=None):
 
 
 class Z2PackWF:
-    def __init__(self, structure, vasp_cmd=VASP_CMD, db_file=DB_FILE, name="Z2Pack WF"):
+    def __init__(self, structure, vasp_cmd=VASP_CMD, db_file=DB_FILE):
         """
       ***VASP_CMD in my_fworker.yaml MUST be set to "vasp_ncl" for Z2Pack.
 
@@ -169,7 +169,7 @@ class Z2PackWF:
 
         self.structure = structure
         self.uuid = str(uuid4())
-        self.wf_meta = {"wf_uuid": self.uuid, "wf_name": self.__class__.__name__}
+        self.wf_meta = {"wf_uuid": self.uuid, "wf_name": "Z2Pack WF"}
 
     def get_wf(self, c=None):
         """Get the workflow.
@@ -185,12 +185,15 @@ class Z2PackWF:
 
         nsites = len(self.structure.sites)
 
+        vis = MPStaticSet(self.structure, potcar_functional="PBE_54", force_gamma=True)
+
         opt_fw = OptimizeFW(
-            self.structure, vasp_cmd=c["VASP_CMD"], db_file=c["DB_FILE"]
+            self.structure, vasp_input_set=vis, vasp_cmd=c["VASP_CMD"], db_file=c["DB_FILE"]
         )
 
         static_fw = StaticFW(
             self.structure,
+            vasp_input_set=vis,
             vasp_cmd=c["VASP_CMD"],
             db_file=c["DB_FILE"],
             parents=[opt_fw],
