@@ -85,6 +85,7 @@ class Z2PackFW(Firework):
         self,
         parents=None,
         structure=None,
+        surface=None,
         uuid=None,
         name="z2pack",
         db_file=None,
@@ -98,6 +99,7 @@ class Z2PackFW(Firework):
 
         Args:
             structure (Structure): Structure object.
+            surface (str): Like "kx_0", "kx_1", "ky_0", etc. that indicates TRIM surface in BZ.
             uuid (str): Unique wf identifier.
             name (str): name of this FW
             db_file (str): path to the db file
@@ -147,11 +149,7 @@ class Z2PackFW(Firework):
         # Copy files to a folder called 'input' for z2pack
         t.append(SetUpZ2Pack(ncl_magmoms=ncl_magmoms))
 
-        # Run Z2Pack on 6 TRI planes in the BZ
-        surfaces = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
-
-        for surface in surfaces:
-            t.append(RunZ2Pack(surface=surface))
+        t.append(RunZ2Pack(surface=surface))
 
         t.extend([PassCalcLocs(name=name), Z2PackToDb(db_file=db_file)])
 

@@ -199,15 +199,23 @@ class Z2PackWF:
             parents=[opt_fw],
         )
 
-        z2pack_fw = Z2PackFW(
-            parents=[opt_fw, static_fw],
-            structure=self.structure,
-            uuid=self.uuid,
-            vasp_cmd=c["VASP_CMD"],
-            db_file=c["DB_FILE"],
-        )
+        # Separate FW for each BZ surface calc
+        # Run Z2Pack on 6 TRI planes in the BZ
+        surfaces = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
+        z2pack_fws = []
 
-        fws = [opt_fw, static_fw, z2pack_fw]
+        for surface in surfaces:
+            z2pack_fw = Z2PackFW(
+                parents=[static_fw],
+                structure=self.structure,
+                surface=surface,
+                uuid=self.uuid,
+                vasp_cmd=c["VASP_CMD"],
+                db_file=c["DB_FILE"],
+            )
+            z2pack_fws.append(z2pack_fw)
+
+        fws = [opt_fw, static_fw] + z2pack_fws
 
         wf = Workflow(fws)
         wf = add_additional_fields_to_taskdocs(wf, {"wf_meta": self.wf_meta})
@@ -272,7 +280,7 @@ class Z2PackWF:
 
         wf = add_common_powerups(wf, c)
 
-        wf.name = "{}:{}".format(self.structure.composition.reduced_formula, "z2pack")
+        wf.name = "{} {}".format(self.structure.composition.reduced_formula, "Z2Pack")
 
         if c.get("STABILITY_CHECK", STABILITY_CHECK):
             wf = add_stability_check(wf, fw_name_constraint="structure optimization")

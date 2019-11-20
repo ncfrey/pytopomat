@@ -264,13 +264,26 @@ class SetUpZ2Pack(FiretaskBase):
         incar.update(incar_update)
         incar.write_file("INCAR")
 
+        try:
+            struct = Structure.from_file("POSCAR")
+            formula = struct.composition.formula
+            reduced_formula = struct.composition.reduced_formula
+            structure = struct.as_dict()
+
+        except:
+            formula = None
+            structure = None
+            reduced_formula = None
+
         files_to_copy = ["CHGCAR", "INCAR", "POSCAR", "POTCAR", "wannier90.win"]
 
         os.mkdir("input")
         for file in files_to_copy:
             shutil.move(file, "input")
 
-        return FWAction()
+        return FWAction(update_spec={"structure": structure,
+            "formula": formula,
+            "reduced_formula": reduced_formula})
 
 
 @explicit_serialize
@@ -311,7 +324,14 @@ class Z2PackToDb(FiretaskBase):
 
         surfaces = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
 
-        d = {"z2pack_out": {surface: fw_spec[surface] for surface in surfaces}}
+        d = {"formula": fw_spec["formula"],
+            "reduced_formula": fw_spec["reduced_formula"]
+            "structure": fw_spec["structure"]}
+
+        for surface in surfaces:
+            if surface in fw_spec.keys():
+                d[surface] = fw_spec[surface]
+
         d = jsanitize(d)
 
         # store the results
@@ -323,7 +343,7 @@ class Z2PackToDb(FiretaskBase):
             db = VaspCalcDb.from_db_file(db_file, admin=True)
             db.collection = db.db["z2pack"]
             db.collection.insert_one(d)
-            logger.info("Z2Pack surface calculations complete.")
+            logger.info("Z2Pack surface calculation complete.")
 
         return FWAction()
 
