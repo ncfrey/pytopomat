@@ -325,7 +325,7 @@ class Z2PackToDb(FiretaskBase):
         surfaces = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
 
         d = {"formula": fw_spec["formula"],
-            "reduced_formula": fw_spec["reduced_formula"]
+            "reduced_formula": fw_spec["reduced_formula"],
             "structure": fw_spec["structure"]}
 
         for surface in surfaces:
