@@ -1,5 +1,7 @@
+import os
 import z2pack
-from monty.json import MSONable
+from monty.json import MSONable, jsanitize
+from monty.serialization import loadfn
 
 """
 This module offers a high level framework for analyzing topological materials in a high-throughput context with VASP and Z2Pack.
@@ -131,20 +133,22 @@ class Z2PackCaller:
 
 
 class Z2Output(MSONable):
-    def __init__(self, result, surface, chern_number=None, z2_invariant=None):
+    def __init__(self, result, surface, result_dict=None, chern_number=None, z2_invariant=None):
         """
         Class for storing results of band topology analysis.
 
         Args:
             result (object): Output from z2pack.surface.run()
             surface (str): TRI BZ surface label.
-            chern_number (int): Chern number.
+            result_dict (dict): Dict representation of z2pack output.
+            chern_number (float): Chern number.
             z2_invariant (int): Z2 invariant. 
             
         """
 
-        self._result = result
+        self.result = result
         self.surface = surface
+        self.result_dict = result_dict
         self.chern_number = chern_number
         self.z2_invariant = z2_invariant
 
@@ -158,3 +162,13 @@ class Z2Output(MSONable):
 
         self.chern_number = chern_number
         self.z2_invariant = z2_invariant
+
+        # Convert result object to dict
+        z2pack.io.save(result, 'result_temp.json')
+        result_dict = loadfn('result_temp.json')
+        os.remove('result_temp.json')
+        self.result = jsanitize(result)
+        self.result_dict = result_dict
+
+
+

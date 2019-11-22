@@ -122,7 +122,7 @@ class Z2PackFW(Firework):
         ncl_magmoms = " ".join(ncl_magmoms)
 
         fw_name = "{}-{}".format(
-            structure.composition.reduced_formula if structure else "unknown", name
+            structure.composition.reduced_formula if structure else "unknown", surface
         )
 
         t = []
