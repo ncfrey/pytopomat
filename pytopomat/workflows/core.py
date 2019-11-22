@@ -210,6 +210,7 @@ class Z2PackWF:
                 structure=self.structure,
                 surface=surface,
                 uuid=self.uuid,
+                name="z2pack",
                 vasp_cmd=c["VASP_CMD"],
                 db_file=c["DB_FILE"],
             )
@@ -263,11 +264,11 @@ class Z2PackWF:
                 fw_name_constraint="structure optimization",
             )
 
-        # Helpful vasp settings
+        # Helpful vasp settings and no parallelization 
         wf = add_modify_incar(
             wf,
             modify_incar_params={
-                "incar_update": {"ADDGRID": ".TRUE.", "LASPH": ".TRUE.", "GGA": "PS"}
+                "incar_update": {"ADDGRID": ".TRUE.", "LASPH": ".TRUE.", "GGA": "PS", "NCORE": 1}
             },
         )
 
