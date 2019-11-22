@@ -1,7 +1,7 @@
 import os
 import z2pack
 from monty.json import MSONable, jsanitize
-from monty.serialization import loadfn
+from monty.serialization import loadfn, dumpfn
 
 """
 This module offers a high level framework for analyzing topological materials in a high-throughput context with VASP and Z2Pack.
@@ -152,7 +152,55 @@ class Z2Output(MSONable):
         self.chern_number = chern_number
         self.z2_invariant = z2_invariant
 
-        self._parse_result(result)
+    def as_dict(self):
+        """
+        Sanitization required for z2pack SurfaceResult object.
+        """
+
+        d = {}
+        d["@module"] = self.__class__.__module__
+        d["@class"] = self.__class__.__name__
+        d["@version"] = __version__
+        d["result"] = jsanitize(self.result)
+        d["surface"] = self.surface
+        d["result_dict"] = self._result_to_dict(self.result)
+
+        chern_number, z2_invariant = self._parse_result(self.result)
+
+        d["chern_number"] = chern_number
+        d["z2_invariant"] = z2_invariant
+
+        return d
+
+    @classmethod
+    def from_dict(cls, d):
+
+        result = Z2Output._dict_to_result(d["result_dict"])
+
+        z2o = Z2Output(
+            result=result,
+            surface=d["surface"],
+            result_dict=d["result_dict"],
+            chern_number=d["chern_number"],
+            z2_invariant=d["z2_invariant"])
+
+        return z2o
+
+    def _result_to_dict(self, result):
+        # Convert result object to dict
+        z2pack.io.save(result, 'result_temp.json')
+        result_dict = loadfn('result_temp.json')
+        os.remove('result_temp.json')
+
+        return result_dict
+
+    @staticmethod
+    def _dict_to_result(result_dict):
+        dumpfn(result_dict, 'result_temp.json')
+        result = z2pack.io.load('result_temp.json')
+        os.remove('result_temp.json')
+
+        return result
 
     def _parse_result(self, result):
 
@@ -160,15 +208,9 @@ class Z2Output(MSONable):
         chern_number = z2pack.invariant.chern(result)
         z2_invariant = z2pack.invariant.z2(result)
 
-        self.chern_number = chern_number
-        self.z2_invariant = z2_invariant
+        return chern_number, z2_invariant
 
-        # Convert result object to dict
-        z2pack.io.save(result, 'result_temp.json')
-        result_dict = loadfn('result_temp.json')
-        os.remove('result_temp.json')
-        self.result = jsanitize(result)
-        self.result_dict = result_dict
+
 
 
 
