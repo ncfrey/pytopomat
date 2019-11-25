@@ -381,7 +381,7 @@ class WriteWannier90Win(FiretaskBase):
             "spinors=.true.",
             "num_iter 0",
             "shell_list 1",
-            "exclude_bands %d-%d" % (nelec + 1, nbands),
+            "exclude_bands %d-%d" % (nelec + 1, 2*nbands),
         ]
 
         w90_file = "\n".join(w90_file)
