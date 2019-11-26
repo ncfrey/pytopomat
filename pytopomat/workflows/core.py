@@ -217,7 +217,7 @@ class Z2PackWF:
     @staticmethod
     def _is_permutation_eq(A, B):
         """
-        Check for equivalency between two arrays assuming including permutations. 
+        Check for equivalency between two arrays including permutations. 
 
         Returns:
           Whether the two arrays are equivalent (True) or not (False). 
@@ -240,7 +240,7 @@ class Z2PackWF:
 
     def get_equiv_planes(self):
         """
-        Get equivalent TRIMP planes in the BZ using the reciprocal point symmetry.
+        Get equivalent TRIM planes in the BZ using the reciprocal point symmetry.
 
         Returns:
           plane_equiv (dict): Dictionary providing equivalent TRIM plane names. 
@@ -276,7 +276,8 @@ class Z2PackWF:
         return plane_equiv
 
     def get_wf(self, c=None):
-        """Get the workflow.
+        """
+        Get the workflow.
 
         Returns:
           Workflow
