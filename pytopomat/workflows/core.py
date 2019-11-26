@@ -94,7 +94,8 @@ def wf_vasp2trace_nonmagnetic(structure, c=None):
             },
             {},
         ],
-        vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
+        vis=MPStaticSet(structure, potcar_functional="PBE_54",
+                        force_gamma=True),
         common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},
     )
 
@@ -147,7 +148,8 @@ def wf_vasp2trace_nonmagnetic(structure, c=None):
     wf = add_common_powerups(wf, c)
 
     if c.get("STABILITY_CHECK", STABILITY_CHECK):
-        wf = add_stability_check(wf, fw_name_constraint="structure optimization")
+        wf = add_stability_check(
+            wf, fw_name_constraint="structure optimization")
 
     if c.get("ADD_WF_METADATA", ADD_WF_METADATA):
         wf = add_wf_metadata(wf, structure)
@@ -171,6 +173,108 @@ class Z2PackWF:
         self.uuid = str(uuid4())
         self.wf_meta = {"wf_uuid": self.uuid, "wf_name": "Z2Pack WF"}
 
+    @staticmethod
+    def _get_reciprocal_point_group_nonmagnetic(struct):
+        """
+        Obtain the symmetry ops. in the reciprocal point group of an input structure.  
+
+        Returns:
+          recip_point_group (list): List of symmetry operations as numpy arrays in the 
+          fractional reciprocal space basis. 
+
+        """
+        R = -1*np.eye(3)
+        sga = SpacegroupAnalyzer(struct)
+        ops = sga.get_symmetry_operations()
+        isomorphic_point_group = [op.rotation_matrix for op in ops]
+
+        V = struct.lattice.matrix.T  # fractional real space to cartesian real space
+        # fractional reciprocal space to cartesian reciprocal space
+        W = struct.lattice.reciprocal_lattice.matrix.T
+        # fractional real space to fractional reciprocal space
+        A = np.dot(np.linalg.inv(W), V)
+
+        Ainv = np.linalg.inv(A)
+        # convert to reciprocal primitive basis
+        recip_point_group = [np.around(np.dot(A, np.dot(R, Ainv)), decimals=2)]
+        for op in isomorphic_point_group:
+            op = np.around(np.dot(A, np.dot(op, Ainv)), decimals=2)
+            new = True
+            new_coset = True
+            for thing in recip_point_group:
+                if (thing == op).all():
+                    new = False
+                if (thing == np.dot(R, op)).all():
+                    new_coset = False
+
+            if new:
+                recip_point_group.append(op)
+            if new_coset:
+                recip_point_group.append(np.dot(R, op))
+
+        return recip_point_group
+
+    @staticmethod
+    def _is_permutation_eq(A, B):
+        """
+        Check for equivalency between two arrays assuming including permutations. 
+
+        Returns:
+          Whether the two arrays are equivalent (True) or not (False). 
+
+        """
+        count = {}
+        for a in A:
+            count[str(a)] = 1
+
+        for b in B:
+            if str(b) in count:
+                if count[str(b)] == 0:
+                    return False
+                else:
+                    count[str(b)] = count[str(b)] - 1
+            else:
+                return False
+
+        return True
+
+    def get_equiv_planes(self):
+        """
+        Get equivalent TRIMP planes in the BZ using the reciprocal point symmetry.
+
+        Returns:
+          plane_equiv (dict): Dictionary providing equivalent TRIM plane names. 
+
+        """
+        struct = self.structure
+        rpg_ops = get_rpg_ops(struct)
+
+        trim_pts = list(itertools.product((0.0, 0.5), repeat=3))
+
+        planes = {}
+        plane_equiv = {}
+        symbols = ['x', 'y', 'z']
+        for coord in range(3):
+            for plane_num in range(2):
+                planes['k%s_%s' % (symbols[coord], str(plane_num))] = \
+                    [np.array(pt) for pt in trim_pts if pt[coord]
+                     == float(plane_num)/2.0]
+                plane_equiv['k%s_%s' % (symbols[coord], str(plane_num))] = []
+
+        for plane in planes.keys():
+            for op in rpg_ops:
+                trans_pts = [np.dot(op, pt) % 1.0 for pt in planes[plane]]
+
+                for other_plane in planes.keys():
+                    if other_plane != plane:
+                        check_eq = _is_permutation_eq(
+                            planes[other_plane], trans_pts)
+
+                        if check_eq and other_plane not in plane_equiv[plane]:
+                            plane_equiv[plane].append(other_plane)
+
+        return plane_equiv
+
     def get_wf(self, c=None):
         """Get the workflow.
 
@@ -185,7 +289,8 @@ class Z2PackWF:
 
         nsites = len(self.structure.sites)
 
-        vis = MPStaticSet(self.structure, potcar_functional="PBE_54", force_gamma=True)
+        vis = MPStaticSet(
+            self.structure, potcar_functional="PBE_54", force_gamma=True)
 
         opt_fw = OptimizeFW(
             self.structure, vasp_input_set=vis, vasp_cmd=c["VASP_CMD"], db_file=c["DB_FILE"]
@@ -200,8 +305,19 @@ class Z2PackWF:
         )
 
         # Separate FW for each BZ surface calc
-        # Run Z2Pack on 6 TRI planes in the BZ
-        surfaces = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
+        # Run Z2Pack on unique TRIM planes in the BZ
+
+        surfaces = ['kx_0', 'kx_1']
+        equiv_planes = self.get_equiv_planes()
+
+        for add_surface in equiv_planes.keys():
+            mark = True
+            for surface in surfaces:
+                if surface in equiv_planes[add_surface]:
+                    mark = False
+            if mark and add_surface not in surfaces:
+                surfaces.append(add_surface)
+
         z2pack_fws = []
 
         for surface in surfaces:
@@ -264,7 +380,7 @@ class Z2PackWF:
                 fw_name_constraint="structure optimization",
             )
 
-        # Helpful vasp settings and no parallelization 
+        # Helpful vasp settings and no parallelization
         wf = add_modify_incar(
             wf,
             modify_incar_params={
@@ -281,10 +397,12 @@ class Z2PackWF:
 
         wf = add_common_powerups(wf, c)
 
-        wf.name = "{} {}".format(self.structure.composition.reduced_formula, "Z2Pack")
+        wf.name = "{} {}".format(
+            self.structure.composition.reduced_formula, "Z2Pack")
 
         if c.get("STABILITY_CHECK", STABILITY_CHECK):
-            wf = add_stability_check(wf, fw_name_constraint="structure optimization")
+            wf = add_stability_check(
+                wf, fw_name_constraint="structure optimization")
 
         if c.get("ADD_WF_METADATA", ADD_WF_METADATA):
             wf = add_wf_metadata(wf, self.structure)
