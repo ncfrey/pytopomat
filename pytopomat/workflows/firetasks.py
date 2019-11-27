@@ -281,9 +281,13 @@ class SetUpZ2Pack(FiretaskBase):
         for file in files_to_copy:
             shutil.move(file, "input")
 
-        return FWAction(update_spec={"structure": structure,
-            "formula": formula,
-            "reduced_formula": reduced_formula})
+        return FWAction(
+            update_spec={
+                "structure": structure,
+                "formula": formula,
+                "reduced_formula": reduced_formula,
+            }
+        )
 
 
 @explicit_serialize
@@ -318,15 +322,20 @@ class Z2PackToDb(FiretaskBase):
         db_file (str): path to the db file
     """
 
-    optional_params = ["db_file"]
+    optional_params = ["db_file", "wf_uuid"]
 
     def run_task(self, fw_spec):
 
+        wf_uuid = self["wf_uuid"]
+
         surfaces = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
 
-        d = {"formula": fw_spec["formula"],
+        d = {
+            "wf_uuid": wf_uuid,
+            "formula": fw_spec["formula"],
             "reduced_formula": fw_spec["reduced_formula"],
-            "structure": fw_spec["structure"]}
+            "structure": fw_spec["structure"],
+        }
 
         for surface in surfaces:
             if surface in fw_spec.keys():
@@ -381,12 +390,71 @@ class WriteWannier90Win(FiretaskBase):
             "spinors=.true.",
             "num_iter 0",
             "shell_list 1",
-            "exclude_bands %d-%d" % (nelec + 1, 2*nbands),
+            "exclude_bands %d-%d" % (nelec + 1, 2 * nbands),
         ]
 
         w90_file = "\n".join(w90_file)
 
         with open("wannier90.win", "w") as f:
             f.write(w90_file)
+
+        return FWAction()
+
+
+@explicit_serialize
+class CalcZ2(FiretaskBase):
+    """
+    Calculate (v0; v1, v2, v3) from Z2P output.
+
+    required_params:
+        wf_uuid (str): Unique wf identifier.
+        equiv_planes (dict): of the form {kx_0': ['ky_0', 'kz_0']}.
+
+    """
+
+    required_params = ["wf_uuid", "db_file", "structure", "equiv_planes"]
+
+    def run_task(self, fw_spec):
+
+        surfaces = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
+        structure = self["structure"]
+        equiv_planes = self["equiv_planes"]
+
+        # Get Z2 invariants for each surface
+        uuid = self["wf_uuid"]
+        db_file = env_chk(self.get("db_file"), fw_spec)
+        db = VaspCalcDb.from_db_file(db_file, admin=True)
+        db.collection = db.db["z2pack"]
+
+        task_docs = db.collection.find({"wf_uuid": uuid})
+
+        z2_dict = {}
+        for doc in task_docs:
+            for s in surfaces:
+                if s in doc.keys():
+                    z2_dict[s] = doc[s]["z2_invariant"]
+
+        # Write Z2 values for equivalent planes
+        if len(z2_dict) < 6:  # some equivalent planes
+            for surface in equiv_planes.keys():
+                if surface in z2_dict.keys() and len(equiv_planes[surface]) > 0:
+                    for ep in equiv_planes[surface]:
+                        if ep not in z2_dict.keys():
+                            z2_dict[ep] = z2_dict[surface]
+
+        # store the results
+        d = {
+            "wf_uuid": uuid,
+            "task_label": "z2calc",
+            "formula": structure.composition.formula,
+            "reduced_formula": structure.composition.reduced_formula,
+            "structure": structure,
+            "z2_dict": z2_dict,
+            "equiv_planes": equiv_planes,
+        }
+
+        d = jsanitize(d)
+
+        db.collection.insert_one(d)
 
         return FWAction()

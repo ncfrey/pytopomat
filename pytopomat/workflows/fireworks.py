@@ -17,6 +17,7 @@ from pytopomat.workflows.firetasks import (
     SetUpZ2Pack,
     RunZ2Pack,
     WriteWannier90Win,
+    CalcZ2,
 )
 
 
@@ -151,6 +152,51 @@ class Z2PackFW(Firework):
 
         t.append(RunZ2Pack(surface=surface))
 
-        t.extend([PassCalcLocs(name=name), Z2PackToDb(db_file=db_file)])
+        t.extend([PassCalcLocs(name=name), Z2PackToDb(db_file=db_file, wf_uuid=uuid)])
+
+        super().__init__(t, parents=parents, name=fw_name, **kwargs)
+
+
+class InvariantFW(Firework):
+    def __init__(
+        self,
+        parents=None,
+        structure=None,
+        equiv_planes=None,
+        uuid=None,
+        name="invariant",
+        db_file=None,
+        **kwargs
+    ):
+        """
+        Process Z2Pack outputs, e.g. calculate Z2=(v0; v1, v2, v3).
+
+        Args:
+            parents (list): Parent FWs.
+            structure (Structure): Structure object.
+            equiv_planes (list): Like "kx_0", "kx_1", "ky_0", etc. that indicates TRIM surface in BZ.
+            uuid (str): Unique wf identifier.
+            name (str): name of this FW
+            db_file (str): path to the db file
+            parents (Firework): Parents of this particular Firework. FW or list of FWS.
+            \*\*kwargs: Other kwargs that are passed to Firework.__init__.
+        """
+
+        fw_name = "{}-{}".format(
+            structure.composition.reduced_formula if structure else "unknown",
+            "invariant",
+        )
+
+        t = []
+
+        # Create a dictionary of TRIM surface: Z2 invariant
+        t.append(
+            CalcZ2(
+                wf_uuid=uuid,
+                db_file=db_file,
+                structure=structure,
+                equiv_planes=equiv_planes,
+            )
+        )
 
         super().__init__(t, parents=parents, name=fw_name, **kwargs)

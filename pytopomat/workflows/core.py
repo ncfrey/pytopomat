@@ -1,9 +1,11 @@
 import numpy as np
+import itertools
 
 from uuid import uuid4
 
 from pymatgen.io.vasp.inputs import Kpoints
 from pymatgen.io.vasp.sets import MPStaticSet
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 from atomate.vasp.config import STABILITY_CHECK, VASP_CMD, DB_FILE, ADD_WF_METADATA
 from atomate.vasp.powerups import (
@@ -21,7 +23,7 @@ from fireworks import Workflow
 
 from pytopomat.analyzer import StructureDimensionality
 from pytopomat.z2pack_caller import Z2PackCaller, Z2Output
-from pytopomat.workflows.fireworks import Z2PackFW
+from pytopomat.workflows.fireworks import Z2PackFW, InvariantFW
 
 """
 This module provides workflows for running high-throughput calculations.
@@ -94,8 +96,7 @@ def wf_vasp2trace_nonmagnetic(structure, c=None):
             },
             {},
         ],
-        vis=MPStaticSet(structure, potcar_functional="PBE_54",
-                        force_gamma=True),
+        vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
         common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},
     )
 
@@ -148,8 +149,7 @@ def wf_vasp2trace_nonmagnetic(structure, c=None):
     wf = add_common_powerups(wf, c)
 
     if c.get("STABILITY_CHECK", STABILITY_CHECK):
-        wf = add_stability_check(
-            wf, fw_name_constraint="structure optimization")
+        wf = add_stability_check(wf, fw_name_constraint="structure optimization")
 
     if c.get("ADD_WF_METADATA", ADD_WF_METADATA):
         wf = add_wf_metadata(wf, structure)
@@ -183,7 +183,7 @@ class Z2PackWF:
           fractional reciprocal space basis. 
 
         """
-        R = -1*np.eye(3)
+        R = -1 * np.eye(3)
         sga = SpacegroupAnalyzer(struct)
         ops = sga.get_symmetry_operations()
         isomorphic_point_group = [op.rotation_matrix for op in ops]
@@ -247,19 +247,21 @@ class Z2PackWF:
 
         """
         struct = self.structure
-        rpg_ops = get_rpg_ops(struct)
+        rpg_ops = Z2PackWF._get_reciprocal_point_group_nonmagnetic(struct)
 
         trim_pts = list(itertools.product((0.0, 0.5), repeat=3))
 
         planes = {}
         plane_equiv = {}
-        symbols = ['x', 'y', 'z']
+        symbols = ["x", "y", "z"]
         for coord in range(3):
             for plane_num in range(2):
-                planes['k%s_%s' % (symbols[coord], str(plane_num))] = \
-                    [np.array(pt) for pt in trim_pts if pt[coord]
-                     == float(plane_num)/2.0]
-                plane_equiv['k%s_%s' % (symbols[coord], str(plane_num))] = []
+                planes["k%s_%s" % (symbols[coord], str(plane_num))] = [
+                    np.array(pt)
+                    for pt in trim_pts
+                    if pt[coord] == float(plane_num) / 2.0
+                ]
+                plane_equiv["k%s_%s" % (symbols[coord], str(plane_num))] = []
 
         for plane in planes.keys():
             for op in rpg_ops:
@@ -267,8 +269,9 @@ class Z2PackWF:
 
                 for other_plane in planes.keys():
                     if other_plane != plane:
-                        check_eq = _is_permutation_eq(
-                            planes[other_plane], trans_pts)
+                        check_eq = Z2PackWF._is_permutation_eq(
+                            planes[other_plane], trans_pts
+                        )
 
                         if check_eq and other_plane not in plane_equiv[plane]:
                             plane_equiv[plane].append(other_plane)
@@ -290,11 +293,13 @@ class Z2PackWF:
 
         nsites = len(self.structure.sites)
 
-        vis = MPStaticSet(
-            self.structure, potcar_functional="PBE_54", force_gamma=True)
+        vis = MPStaticSet(self.structure, potcar_functional="PBE_54", force_gamma=True)
 
         opt_fw = OptimizeFW(
-            self.structure, vasp_input_set=vis, vasp_cmd=c["VASP_CMD"], db_file=c["DB_FILE"]
+            self.structure,
+            vasp_input_set=vis,
+            vasp_cmd=c["VASP_CMD"],
+            db_file=c["DB_FILE"],
         )
 
         static_fw = StaticFW(
@@ -308,7 +313,7 @@ class Z2PackWF:
         # Separate FW for each BZ surface calc
         # Run Z2Pack on unique TRIM planes in the BZ
 
-        surfaces = ['kx_0', 'kx_1']
+        surfaces = ["kx_0", "kx_1"]
         equiv_planes = self.get_equiv_planes()
 
         for add_surface in equiv_planes.keys():
@@ -333,7 +338,16 @@ class Z2PackWF:
             )
             z2pack_fws.append(z2pack_fw)
 
-        fws = [opt_fw, static_fw] + z2pack_fws
+        invariant_fw = InvariantFW(
+            parents=[z2pack_fws],
+            structure=self.structure,
+            equiv_planes=equiv_planes,
+            uuid=self.uuid,
+            name="invariant",
+            db_file=c["DB_FILE"],
+        )
+
+        fws = [opt_fw, static_fw] + z2pack_fws + [invariant_fw]
 
         wf = Workflow(fws)
         wf = add_additional_fields_to_taskdocs(wf, {"wf_meta": self.wf_meta})
@@ -385,7 +399,12 @@ class Z2PackWF:
         wf = add_modify_incar(
             wf,
             modify_incar_params={
-                "incar_update": {"ADDGRID": ".TRUE.", "LASPH": ".TRUE.", "GGA": "PS", "NCORE": 1}
+                "incar_update": {
+                    "ADDGRID": ".TRUE.",
+                    "LASPH": ".TRUE.",
+                    "GGA": "PS",
+                    "NCORE": 1,
+                }
             },
         )
 
@@ -398,12 +417,10 @@ class Z2PackWF:
 
         wf = add_common_powerups(wf, c)
 
-        wf.name = "{} {}".format(
-            self.structure.composition.reduced_formula, "Z2Pack")
+        wf.name = "{} {}".format(self.structure.composition.reduced_formula, "Z2Pack")
 
         if c.get("STABILITY_CHECK", STABILITY_CHECK):
-            wf = add_stability_check(
-                wf, fw_name_constraint="structure optimization")
+            wf = add_stability_check(wf, fw_name_constraint="structure optimization")
 
         if c.get("ADD_WF_METADATA", ADD_WF_METADATA):
             wf = add_wf_metadata(wf, self.structure)
