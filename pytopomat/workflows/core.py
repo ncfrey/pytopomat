@@ -338,8 +338,8 @@ class Z2PackWF:
             )
             z2pack_fws.append(z2pack_fw)
 
-        invariant_fw = InvariantFW(
-            parents=[z2pack_fws],
+        analysis_fw = InvariantFW(
+            parents=z2pack_fws,
             structure=self.structure,
             equiv_planes=equiv_planes,
             uuid=self.uuid,
@@ -347,7 +347,7 @@ class Z2PackWF:
             db_file=c["DB_FILE"],
         )
 
-        fws = [opt_fw, static_fw] + z2pack_fws + [invariant_fw]
+        fws = [opt_fw, static_fw] + z2pack_fws + [analysis_fw]
 
         wf = Workflow(fws)
         wf = add_additional_fields_to_taskdocs(wf, {"wf_meta": self.wf_meta})
