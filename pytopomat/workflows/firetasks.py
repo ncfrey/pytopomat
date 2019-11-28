@@ -236,11 +236,24 @@ class SetUpZ2Pack(FiretaskBase):
 
     """
 
-    required_params = ["ncl_magmoms"]
+    required_params = ["ncl_magmoms", "wf_uuid", "db_file"]
 
     def run_task(self, fw_spec):
 
         ncl_magmoms = self["ncl_magmoms"]
+
+        # Get num of electrons and bands from static calc
+        uuid = self["wf_uuid"]
+        db_file = env_chk(self.get("db_file"), fw_spec)
+        db = VaspCalcDb.from_db_file(db_file, admin=True)
+        db.collection = db.db["tasks"]
+
+        task_doc = db.collection.find_one(
+            {"wf_meta.wf_uuid": uuid, "task_label": "static"}, ["input.parameters"]
+        )
+
+        nelec = int(task_doc["input"]["parameters"]["NELECT"])
+        nbands = int(task_doc["input"]["parameters"]["NBANDS"])
 
         incar = Incar.from_file("INCAR")
 
@@ -259,6 +272,7 @@ class SetUpZ2Pack(FiretaskBase):
             "LWAVE": ".FALSE.",
             "ICHARG": 11,
             "MAGMOM": "%s" % ncl_magmoms,
+            "NBANDS": "%d" % (2*nbands),
         }
 
         incar.update(incar_update)
