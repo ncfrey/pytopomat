@@ -148,7 +148,7 @@ class Z2PackFW(Firework):
         t.append(WriteWannier90Win(wf_uuid=uuid, db_file=db_file))
 
         # Copy files to a folder called 'input' for z2pack
-        t.append(SetUpZ2Pack(ncl_magmoms=ncl_magmoms, wf_uuid=wf_uuid, 
+        t.append(SetUpZ2Pack(ncl_magmoms=ncl_magmoms, wf_uuid=uuid, 
             db_file=db_file))
 
         t.append(RunZ2Pack(surface=surface))
