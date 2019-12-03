@@ -17,7 +17,7 @@ from pytopomat.workflows.firetasks import (
     SetUpZ2Pack,
     RunZ2Pack,
     WriteWannier90Win,
-    CalcZ2,
+    InvariantsToDB,
 )
 
 
@@ -163,6 +163,7 @@ class InvariantFW(Firework):
         self,
         parents=None,
         structure=None,
+        symmetry_reduction=None,
         equiv_planes=None,
         uuid=None,
         name="invariant",
@@ -175,6 +176,8 @@ class InvariantFW(Firework):
         Args:
             parents (list): Parent FWs.
             structure (Structure): Structure object.
+            symmetry_reduction (bool): Set to False to disable symmetry reduction and 
+            include all 6 BZ surfaces (for magnetic systems).
             equiv_planes (list): Like "kx_0", "kx_1", "ky_0", etc. that indicates TRIM surface in BZ.
             uuid (str): Unique wf identifier.
             name (str): name of this FW
@@ -190,12 +193,13 @@ class InvariantFW(Firework):
 
         t = []
 
-        # Create a dictionary of TRIM surface: Z2 invariant
+        # Create a dictionary of TRIM surface: Z2 invariant, Chern number
         t.append(
-            CalcZ2(
+            InvariantsToDB(
                 wf_uuid=uuid,
                 db_file=db_file,
                 structure=structure,
+                symmetry_reduction=symmetry_reduction,
                 equiv_planes=equiv_planes,
             )
         )

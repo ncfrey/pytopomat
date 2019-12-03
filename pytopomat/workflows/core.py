@@ -158,7 +158,7 @@ def wf_vasp2trace_nonmagnetic(structure, c=None):
 
 
 class Z2PackWF:
-    def __init__(self, structure, vasp_cmd=VASP_CMD, db_file=DB_FILE):
+    def __init__(self, structure, symmetry_reduction=True, vasp_cmd=VASP_CMD, db_file=DB_FILE):
         """
       ***VASP_CMD in my_fworker.yaml MUST be set to "vasp_ncl" for Z2Pack.
 
@@ -166,10 +166,13 @@ class Z2PackWF:
 
       Args:
           structure (Structure): Pymatgen structure object
+          symmetry_reduction (bool): Set to False to disable symmetry reduction and 
+          include all 6 BZ surfaces (for magnetic systems).
 
       """
 
         self.structure = structure
+        self.symmetry_reduction = symmetry_reduction
         self.uuid = str(uuid4())
         self.wf_meta = {"wf_uuid": self.uuid, "wf_name": "Z2Pack WF"}
 
@@ -316,13 +319,17 @@ class Z2PackWF:
         surfaces = ["kx_0", "kx_1"]
         equiv_planes = self.get_equiv_planes()
 
-        for add_surface in equiv_planes.keys():
-            mark = True
-            for surface in surfaces:
-                if surface in equiv_planes[add_surface]:
-                    mark = False
-            if mark and add_surface not in surfaces:
-                surfaces.append(add_surface)
+        # Only run calcs on inequivalent BZ surfaces
+        if self.symmetry_reduction:
+            for add_surface in equiv_planes.keys():
+                mark = True
+                for surface in surfaces:
+                    if surface in equiv_planes[add_surface]:
+                        mark = False
+                if mark and add_surface not in surfaces:
+                    surfaces.append(add_surface)
+        else:
+            surfaces = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
 
         z2pack_fws = []
 
@@ -341,6 +348,7 @@ class Z2PackWF:
         analysis_fw = InvariantFW(
             parents=z2pack_fws,
             structure=self.structure,
+            symmetry_reduction=self.symmetry_reduction,
             equiv_planes=equiv_planes,
             uuid=self.uuid,
             name="invariant",

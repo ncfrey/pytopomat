@@ -416,22 +416,26 @@ class WriteWannier90Win(FiretaskBase):
 
 
 @explicit_serialize
-class CalcZ2(FiretaskBase):
+class InvariantsToDB(FiretaskBase):
     """
-    Calculate (v0; v1, v2, v3) from Z2P output.
+    Store Z2 and Chern nums on all 6 TRIM surfaces from Z2P output.
 
     required_params:
         wf_uuid (str): Unique wf identifier.
+        symmetry_reduction (bool): Set to False to disable symmetry reduction and 
+        include all 6 BZ surfaces (for magnetic systems).
         equiv_planes (dict): of the form {kx_0': ['ky_0', 'kz_0']}.
 
     """
 
-    required_params = ["wf_uuid", "db_file", "structure", "equiv_planes"]
+    required_params = ["wf_uuid", "db_file", "structure", "symmetry_reduction", 
+    "equiv_planes"]
 
     def run_task(self, fw_spec):
 
         surfaces = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
         structure = self["structure"]
+        symmetry_reduction = self["symmetry_reduction"]
         equiv_planes = self["equiv_planes"]
 
         # Get Z2 invariants for each surface
@@ -448,23 +452,38 @@ class CalcZ2(FiretaskBase):
                 if s in doc.keys():
                     z2_dict[s] = doc[s]["z2_invariant"]
 
-        # Write Z2 values for equivalent planes
-        if len(z2_dict) < 6:  # some equivalent planes
+        # Get Chern numbers
+        chern_dict = {}
+        for doc in task_docs:
+            for s in surfaces:
+                if s in doc.keys():
+                    chern_dict[s] = doc[s]["chern_number"]
+
+        # Write invariants for equivalent planes
+        if symmetry_reduction and len(z2_dict) < 6:  # some equivalent planes
             for surface in equiv_planes.keys():
+                # Z2
                 if surface in z2_dict.keys() and len(equiv_planes[surface]) > 0:
                     for ep in equiv_planes[surface]:
                         if ep not in z2_dict.keys():
                             z2_dict[ep] = z2_dict[surface]
+                # Chern
+                if surface in chern_dict.keys() and len(equiv_planes[surface]) > 0:
+                    for ep in equiv_planes[surface]:
+                        if ep not in chern_dict.keys():
+                            chern_dict[ep] = chern_dict[surface]
 
         # store the results
         d = {
             "wf_uuid": uuid,
-            "task_label": "z2calc",
+            "task_label": "topological invariants",
             "formula": structure.composition.formula,
             "reduced_formula": structure.composition.reduced_formula,
             "structure": structure.as_dict(),
             "z2_dict": z2_dict,
+            "chern_dict": chern_dict,
             "equiv_planes": equiv_planes,
+            "symmetry_reduction": symmetry_reduction,
         }
 
         d = jsanitize(d)
