@@ -462,7 +462,7 @@ class CalcZ2(FiretaskBase):
             "task_label": "z2calc",
             "formula": structure.composition.formula,
             "reduced_formula": structure.composition.reduced_formula,
-            "structure": structure,
+            "structure": structure.as_dict(),
             "z2_dict": z2_dict,
             "equiv_planes": equiv_planes,
         }
