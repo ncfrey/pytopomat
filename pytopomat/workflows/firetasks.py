@@ -438,7 +438,7 @@ class InvariantsToDB(FiretaskBase):
         symmetry_reduction = self["symmetry_reduction"]
         equiv_planes = self["equiv_planes"]
 
-        # Get Z2 invariants for each surface
+        # Get invariants for each surface
         uuid = self["wf_uuid"]
         db_file = env_chk(self.get("db_file"), fw_spec)
         db = VaspCalcDb.from_db_file(db_file, admin=True)
@@ -447,16 +447,11 @@ class InvariantsToDB(FiretaskBase):
         task_docs = db.collection.find({"wf_uuid": uuid})
 
         z2_dict = {}
-        for doc in task_docs:
-            for s in surfaces:
-                if s in doc.keys():
-                    z2_dict[s] = doc[s]["z2_invariant"]
-
-        # Get Chern numbers
         chern_dict = {}
         for doc in task_docs:
             for s in surfaces:
                 if s in doc.keys():
+                    z2_dict[s] = doc[s]["z2_invariant"]
                     chern_dict[s] = doc[s]["chern_number"]
 
         # Write invariants for equivalent planes
