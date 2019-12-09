@@ -143,6 +143,7 @@ class Vasp2TraceOutput(MSONable):
 
         self._parse_stdout(vasp2trace_output)
 
+
     def _parse_stdout(self, vasp2trace_output):
 
         try:
@@ -200,18 +201,6 @@ class Vasp2TraceOutput(MSONable):
         except:
             warnings.warn(
                 'Vasp2trace output not found. Setting instance attributes from direct inputs!')
-
-
-        # Set instance attributes
-        self.num_occ_bands = num_occ_bands
-        self.soc = soc
-        self.num_symm_ops = num_symm_ops
-        self.symm_ops = symm_ops
-        self.num_max_kvec = num_max_kvec
-        self.kvecs = kvecs
-        self.num_kvec_symm_ops = num_kvec_symm_ops
-        self.symm_ops_in_little_cogroup = symm_ops_in_little_cogroup
-        self.traces = traces
 
 
 class BandParity(MSONable):
@@ -297,15 +286,25 @@ class BandParity(MSONable):
         # x,y,z -> -x,-y,-z
         parity_mat = np.array([-1, 0, 0, 0, -1, 0, 0, 0, -1])
 
+        parity_op_index = None
+
+
+
         for idx, symm_op in enumerate(symm_ops):
-            rot_mat = symm_op[0:9]  # Rotation matrix
-            trans_mat = symm_op[9:12]  # Translation matrix
+            try:
+                rot_mat = symm_op[0:9]  # Rotation matrix
+                trans_mat = symm_op[9:12]  # Translation matrix
+            except TypeError:
+                raise RuntimeError("No non-trivial symmetry operations in vasp2trace output!")
 
             # Find the parity operator
             if np.array_equal(rot_mat, parity_mat):
                 parity_op_index = idx + 1  # SymmOps are 1 indexed
 
-        return parity_op_index
+        if parity_op_index == None:
+            raise RuntimeError("Parity operation not found in vasp2trace output!")
+        else:
+            return parity_op_index
 
     @staticmethod
     def get_trim_data(parity_op_index, v2t_output):
@@ -445,8 +444,13 @@ class BandParity(MSONable):
             trim_energies_formatted[label] = np.zeros(int(nele/2))
             count = 0
 
+
+            if np.any([int(i) == 1 for i in self.trim_data["up"][label]["iden"][:]]):
+                raise RuntimeError('Vasp2trace does not show completely degenrate bands at %s.' % label)
+
             iden_sum = int(np.sum(self.trim_data["up"][label]["iden"][:]))
-            if nele < iden_sum:
+            if nele < iden_sum and \
+               int(self.trim_data["up"][label]["parity"][-1]) == 0:
                 raise RuntimeError(
                     'Cannot tell the parity of the highest occupied state at %s.' % label)
 
