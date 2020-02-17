@@ -106,7 +106,7 @@ class RunVasp2TraceMagnetic(FiretaskBase):
     def run_task(self, fw_spec):
 
         wd = os.getcwd()
-        Vasp2TraceCaller(wd)
+        Vasp2Trace2Caller(wd)  # version2 of vasp2trace for spin-polarized calcs
 
         try:
             raw_struct = Structure.from_file(wd + "/POSCAR")

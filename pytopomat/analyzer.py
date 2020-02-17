@@ -32,6 +32,7 @@ __status__ = "Development"
 __date__ = "August 2019"
 
 VASP2TRACEEXE = which("vasp2trace")
+VASP2TRACE2EXE = which("vasp2trace2") 
 
 
 class Vasp2TraceCaller:
@@ -84,8 +85,59 @@ class Vasp2TraceCaller:
             self.output = {}
             self.output["up"] = Vasp2TraceOutput("trace.txt")
 
-        # Spin-polarized
-        elif path.isfile("trace_up.txt") and path.isfile("trace_dn.txt"):
+        else:
+            raise FileNotFoundError()
+
+
+class Vasp2Trace2Caller:
+    @requires(
+        VASP2TRACE2EXE,
+        "Vasp2TraceCaller requires vasp2trace2 to be in the path."
+        "Please install from https://github.com/zjwang11/irvsp",
+    )
+    def __init__(self, folder_name):
+        """
+        Run vasp2trace_v2 to find the set of irreducible representations at each maximal k-vec of a space group, given the eigenvalues.
+
+        version2 of vasp2trace is for spin-polarized calculations. The executable is renamed "vasp2trace2" to avoid conflict with v1.
+
+        vasp2trace requires a self-consistent VASP run with the flags ISTART=0 and ICHARG=2; followed by a band structure calculation with ICHARG=11, ISYM=2, LWAVE=.True.
+
+        High-symmetry kpts that must be included in the band structure path for a given spacegroup can be found in the max_KPOINTS_VASP folder in the vasp2trace directory.
+
+        Args:
+            folder_name (str): Path to directory with OUTCAR and WAVECAR of band structure run with wavefunctions at the high-symmetry kpts.
+        """
+
+        # Check for OUTCAR and WAVECAR
+        if not path.isfile(folder_name + "/OUTCAR") or not path.isfile(
+            folder_name + "/WAVECAR"
+        ):
+            raise FileNotFoundError()
+
+        # Call vasp2trace
+        os.chdir(folder_name)
+        process = subprocess.Popen(
+            ["vasp2trace2"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        stdout, stderr = process.communicate()
+        stdout = stdout.decode()
+
+        if stderr:
+            stderr = stderr.decode()
+            warnings.warn(stderr)
+
+        if process.returncode != 0:
+            raise RuntimeError(
+                "vasp2trace2 exited with return code {}.".format(process.returncode)
+            )
+
+        self._stdout = stdout
+        self._stderr = stderr
+        self.output = None
+
+        # Process spin-polarized output
+        if path.isfile("trace_up.txt") and path.isfile("trace_dn.txt"):
             self.output = {}
             if path.isfile("trace_up.txt"):
                 self.output["up"] = Vasp2TraceOutput("trace_up.txt")
