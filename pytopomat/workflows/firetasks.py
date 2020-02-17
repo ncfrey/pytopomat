@@ -97,6 +97,42 @@ class RunVasp2Trace(FiretaskBase):
 
 
 @explicit_serialize
+class RunVasp2TraceMagnetic(FiretaskBase):
+    """
+    Execute vasp2trace in current directory with spin-polarized calculation.
+
+    """
+
+    def run_task(self, fw_spec):
+
+        wd = os.getcwd()
+        Vasp2TraceCaller(wd)
+
+        try:
+            raw_struct = Structure.from_file(wd + "/POSCAR")
+            formula = raw_struct.composition.formula
+            structure = raw_struct.as_dict()
+
+        except:
+            composition = None
+            structure = None
+
+        up_data = Vasp2TraceOutput(wd + "/trace_up.txt")
+        down_data = Vasp2TraceOutput(wd + "/trace_dn.txt")
+
+        return FWAction(
+            update_spec={
+                "vasp2trace_out": {
+                    "up": up_data.as_dict(),
+                    "down": down_data.as_dict(),
+                },
+                "structure": structure,
+                "formula": formula,
+            }
+        )
+
+
+@explicit_serialize
 class CopyVaspOutputs(CopyFiles):
     """
     *** This is the same copying class in atomate but altered to accommodate 
@@ -272,7 +308,7 @@ class SetUpZ2Pack(FiretaskBase):
             "LWAVE": ".FALSE.",
             "ICHARG": 11,
             "MAGMOM": "%s" % ncl_magmoms,
-            "NBANDS": "%d" % (2*nbands),
+            "NBANDS": "%d" % (2 * nbands),
         }
 
         incar.update(incar_update)
@@ -428,8 +464,13 @@ class InvariantsToDB(FiretaskBase):
 
     """
 
-    required_params = ["wf_uuid", "db_file", "structure", "symmetry_reduction", 
-    "equiv_planes"]
+    required_params = [
+        "wf_uuid",
+        "db_file",
+        "structure",
+        "symmetry_reduction",
+        "equiv_planes",
+    ]
 
     def run_task(self, fw_spec):
 

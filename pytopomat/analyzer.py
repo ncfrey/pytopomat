@@ -539,7 +539,7 @@ class BandParity(MSONable):
     @staticmethod
     def screen_semimetal(trim_parities):
         """
-        Parity criteria screening for metallic band structures to predict if Weyl semimetal phase is allowed.
+        Parity criteria screening for metallic band structures to predict if nonmagnetic Weyl semimetal phase is allowed.
 
         Args:
             trim_parities (dict): non-spin-polarized trim parities.
@@ -573,6 +573,8 @@ class BandParity(MSONable):
 
         Returns a dictionary of *allowed* magnetic topological properties where their bool values indicate if the property is allowed.
 
+        Requires a spin-polarized VASP calculation and trace_up and trace_dn from vasp2trace v2.
+
         REF: Turner et al., PRB 85, 165120 (2012).
 
         Args:
@@ -585,6 +587,7 @@ class BandParity(MSONable):
 
         mag_screen = {
             "insulator": False,
+            "semimetal_candidate": False,
             "polarization_bqhc": False,
             "magnetoelectric": False,
         }
@@ -610,6 +613,7 @@ class BandParity(MSONable):
         # Might be a Weyl semimetal
         if num_odd_states % 2 == 1:
             mag_screen["insulator"] = False
+            mag_screen["semimetal_candidate"] = True
             mag_screen["polarization_bqhc"] = False
             mag_screen["magnetoelectric"] = False
         else:

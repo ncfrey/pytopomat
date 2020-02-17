@@ -157,8 +157,143 @@ def wf_vasp2trace_nonmagnetic(structure, c=None):
     return wf
 
 
+def wf_vasp2trace_magnetic(structure, c=None):
+    """
+        Fireworks workflow for running a vasp2trace calculation on a magnetic material.
+
+        Args:
+            structure (Structure): Pymatgen structure object with magmom site property.
+
+        Returns:
+            Workflow
+    """
+
+    c = c or {}
+    vasp_cmd = c.get("VASP_CMD", VASP_CMD)
+    db_file = c.get("DB_FILE", DB_FILE)
+
+    ncoords = 3 * len(structure.sites)
+
+    if "magmom" in structure.site_properties:
+        magmoms = structure.site_properties["magmom"]
+        magmoms = [str(m) for m in magmoms]
+        magmoms = " ".join(magmoms)
+
+    nbands = 0
+
+    for site in structure.sites:
+        nbands += site.species.total_electrons
+
+    trim_kpoints = Kpoints(
+        comment="TRIM Points",
+        num_kpts=8,
+        style=Kpoints.supported_modes.Reciprocal,
+        kpts=(
+            (0, 0, 0),
+            (0.5, 0, 0),
+            (0, 0.5, 0),
+            (0, 0, 0.5),
+            (0.5, 0.5, 0),
+            (0, 0.5, 0.5),
+            (0.5, 0, 0.5),
+            (0.5, 0.5, 0.5),
+        ),
+        kpts_shift=(0, 0, 0),
+        kpts_weights=[1, 1, 1, 1, 1, 1, 1, 1],
+        coord_type="Reciprocal",
+        labels=["gamma", "x", "y", "z", "s", "t", "u", "r"],
+        tet_number=0,
+        tet_weight=0,
+        tet_connections=None,
+    )
+
+    wf = get_wf(
+        structure,
+        "vasp2trace_magnetic.yaml",
+        params=[
+            {},
+            {},
+            {
+                "input_set_overrides": {
+                    "other_params": {"user_kpoints_settings": trim_kpoints}
+                }
+            },
+            {},
+        ],
+        vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
+        common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},
+    )
+
+    dim_data = StructureDimensionality(structure)
+
+    if np.any(
+        [
+            dim == 2
+            for dim in [dim_data.larsen_dim, dim_data.cheon_dim, dim_data.gorai_dim]
+        ]
+    ):
+        wf = add_modify_incar(
+            wf,
+            modify_incar_params={
+                "incar_update": {"IVDW": 11, "EDIFFG": 0.005, "IBRION": 2, "NSW": 100}
+            },
+            fw_name_constraint="structure optimization",
+        )
+    else:
+        wf = add_modify_incar(
+            wf,
+            modify_incar_params={
+                "incar_update": {"EDIFFG": 0.005, "IBRION": 2, "NSW": 100}
+            },
+            fw_name_constraint="structure optimization",
+        )
+
+    wf = add_modify_incar(
+        wf,
+        modify_incar_params={
+            "incar_update": {"ADDGRID": ".TRUE.", "LASPH": ".TRUE.", "GGA": "PS"}
+        },
+    )
+
+    # Include magmoms in every calculation
+    wf = add_modify_incar(
+        wf,
+        modify_incar_params={
+            "incar_update": {"ISYM": 2, "MAGMOM": "%s" % magmoms, "ISPIN": 2}
+        },
+    )
+
+    # Spin-polarized band structure
+    wf = add_modify_incar(
+        wf,
+        modify_incar_params={
+            "incar_update": {
+                "ISYM": 2,
+                "LSORBIT": ".FALSE.",
+                "MAGMOM": "%s" % magmoms,
+                "ISPIN": 2,
+                "LWAVE": ".TRUE.",
+                "NBANDS": nbands,
+            }
+        },
+        fw_name_constraint="nscf",
+    )
+
+    wf = add_common_powerups(wf, c)
+
+    if c.get("STABILITY_CHECK", STABILITY_CHECK):
+        wf = add_stability_check(wf, fw_name_constraint="structure optimization")
+
+    if c.get("ADD_WF_METADATA", ADD_WF_METADATA):
+        wf = add_wf_metadata(wf, structure)
+
+    return wf
+
+
 class Z2PackWF:
-    def __init__(self, structure, symmetry_reduction=True, vasp_cmd=VASP_CMD, db_file=DB_FILE):
+    def __init__(
+        self, structure, symmetry_reduction=True, vasp_cmd=VASP_CMD, db_file=DB_FILE
+    ):
         """
       ***VASP_CMD in my_fworker.yaml MUST be set to "vasp_ncl" for Z2Pack.
 
