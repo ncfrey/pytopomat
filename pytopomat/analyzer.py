@@ -738,9 +738,9 @@ class IRVSPCaller:
 
         # Call irvsp
         os.chdir(folder_name)
-        cmd_str = "irvsp -sg %d -v %d > outir.txt" % (sgn, v)
+        cmd_list = ["irvsp", "-sg", str(sgn), "-v", str(v), ">", "outir.txt"]
         process = subprocess.Popen(
-            [cmd_str], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            [cmd_list], stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
         stdout, stderr = process.communicate()
         stdout = stdout.decode()
