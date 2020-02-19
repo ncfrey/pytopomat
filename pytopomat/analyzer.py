@@ -17,9 +17,12 @@ from pymatgen.analysis.dimensionality import (
     get_dimensionality_gorai,
 )
 from pymatgen.analysis.local_env import MinimumDistanceNN
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+from pymatgen.core import Structure
 
 """
-This module offers a high level framework for analyzing topological materials in a high-throughput context with VASP, Z2Pack, and Vasp2Trace.
+This module offers a high level framework for analyzing topological materials in a 
+high-throughput context with VASP, Z2Pack, irvsp, and Vasp2Trace.
 
 """
 
@@ -32,7 +35,8 @@ __status__ = "Development"
 __date__ = "August 2019"
 
 VASP2TRACEEXE = which("vasp2trace")
-VASP2TRACE2EXE = which("vasp2trace2") 
+VASP2TRACE2EXE = which("vasp2trace2")
+IRVSPEXE = which("irvsp")
 
 
 class Vasp2TraceCaller:
@@ -688,6 +692,220 @@ class BandParity(MSONable):
                     mag_screen["magnetoelectric"] = True
 
         return mag_screen
+
+
+class IRVSPCaller:
+    @requires(
+        IRVSPEXE,
+        "IRVSPCaller requires irvsp to be in the path.\n"
+        "Please follow the instructions in https://arxiv.org/pdf/2002.04032.pdf\n"
+        "https://github.com/zjwang11/irvsp/blob/master/src_irvsp_v2.tar.gz",
+    )
+    def __init__(self, folder_name):
+        """
+        Run irvsp to compute irreducible representations (irreps) of electronic states from wavefunctions (WAVECAR) and
+        symmetry operations (OUTCAR).
+
+        Requires a calculation with ISYM=1,2 and LWAVE=.TRUE.
+
+        Something like "phonopy --tolerance 0.01 --symmetry -c POSCAR" should be used to ensure
+        the crystal is in a standard setting before the calculation.
+
+        irvsp v2 is needed to handle all 230 space groups (including nonsymmorphic sgs).
+
+        Args:
+            folder_name (str): Path to directory with POSCAR, OUTCAR and WAVECAR at kpts where irreps should be computed.
+        """
+
+        # Check for OUTCAR and WAVECAR
+        if not path.isfile(folder_name + "/OUTCAR") or not path.isfile(
+            folder_name + "/WAVECAR"
+        ):
+            raise FileNotFoundError()
+
+        # Get sg number of structure
+        s = Structure.from_file("POSCAR")
+        sga = SpacegroupAnalyzer(s, symprec=0.01)
+        sgn = sga.get_space_group_number()
+
+        # Check if symmorphic (same symm elements as corresponding point group)
+        # REF: http://kuchem.kyoto-u.ac.jp/kinso/weda/data/group/space.pdf
+        ssgs = pd.read_csv('symmorphic_spacegroups.csv', header=None).iloc[:,0].tolist()
+        if sgn in ssgs:
+            v = 1  # irvsp1 for symmorphic
+        else:
+            v = 2  # irvsp2 for non-symmorphic
+
+        # Call irvsp
+        os.chdir(folder_name)
+        cmd_str = "irvsp -sg %d -v %d > outir.txt" % (sgn, v)
+        process = subprocess.Popen(
+            [cmd_str], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        stdout, stderr = process.communicate()
+        stdout = stdout.decode()
+
+        if stderr:
+            stderr = stderr.decode()
+            warnings.warn(stderr)
+
+        if process.returncode != 0:
+            raise RuntimeError(
+                "irvsp exited with return code {}.".format(process.returncode)
+            )
+
+        self._stdout = stdout
+        self._stderr = stderr
+        self.output = None
+
+        # Process output
+        if path.isfile("outir.txt"):
+            self.output = IRVSPOutput("outir.txt")
+
+        else:
+            raise FileNotFoundError()
+
+
+class IRVSPOutput(MSONable):
+    def __init__(
+        self,
+        irvsp_output,
+        symmorphic=None,
+        inversion=None,
+        soc=None,
+        spin_polarized=None,
+        parity_eigenvals=None,
+    ):
+        """
+        This class processes results from irvsp to get irreps of electronic states. 
+
+        Refer to https://arxiv.org/pdf/2002.04032.pdf for further explanation of parameters.
+
+        Args:
+            irvsp_output (txt file): output from irvsp.
+            symmorphic (Bool): Symmorphic space group?
+            inversion (Bool): Centrosymmetric space group?
+            soc (Bool): Spin-orbit coupling included?
+            spin_polarized (Bool): Spin-polarized system?
+            parity_eigenvals (dict): band index, band degeneracy, energy eigenval, Re(parity eigenval)
+
+        """
+
+        self._irvsp_output = irvsp_output
+
+        self.symmorphic = symmorphic
+        self.inversion = inversion
+        self.soc = soc
+        self.spin_polarized = spin_polarized
+        self.parity_eigenvals = parity_eigenvals
+
+        self._parse_stdout(irvsp_output)
+
+
+    def _parse_stdout(self, irvsp_output):
+
+        # try:
+        with open(irvsp_output, "r") as file:
+            lines = file.readlines()
+
+            # Get header info
+            symm_line = lines[7]
+            if "Non-symmorphic" in symm_line:
+                symmorphic = False
+            else:
+                symmorphic = True
+
+            if "without" in symm_line:
+                inversion = False
+            else:
+                inversion = True
+
+            soc_line = lines[9]
+            if "No" in soc_line:
+                soc = False
+            else:
+                soc = True
+
+            sp_line = lines[10]
+            if "No" in sp_line:
+                spin_polarized = False
+            else:
+                spin_polarized = True
+
+            # Define TRIM labels in units of primitive reciprocal vectors
+            trim_labels = ["gamma", "x", "y", "z", "s", "t", "u", "r"]
+            trim_pts = [
+                (0.0, 0.0, 0.0),
+                (0.5, 0.0, 0.0),
+                (0.0, 0.5, 0.0),
+                (0.0, 0.0, 0.5),
+                (0.5, 0.5, 0.0),
+                (0.0, 0.5, 0.5),
+                (0.5, 0.0, 0.5),
+                (0.5, 0.5, 0.5),
+            ]
+
+            trim_dict = {pt: label for (pt, label) in zip(trim_pts, trim_labels)}
+
+            # Dicts with kvec index as keys
+            parity_eigenvals = {}
+
+            # Start of irrep trace info
+            for idx, line in enumerate(lines):
+                if line.startswith("**********************"):
+                    block_start = idx + 1
+                    break
+
+            trace_start = False
+            for idx, line in enumerate(lines[block_start:]):
+                if line.startswith("k = "):  # New kvec
+                    line_list = line.split(" ")[2:]
+                    kvec = tuple([float(i) for i in line_list])
+                    trim_label = trim_dict[kvec]
+
+                if "bnd ndg" in line:  # find inversion symmop position
+                    trace_start = True  # Start of block of traces
+                    bnds, ndgs, bnd_evs, inv_evs = [], [], [], []
+                    line_list = line.strip().split(" ")
+                    symmops = [i for i in line_list if i]
+                    inv_num = symmops.index('I')
+                    num_ops = len(symmops) - 3 # subtract bnd, ndg, ev 
+
+                if trace_start and '0' in line:  # full trace line, not a blank line
+                    line_list = line[6:].strip()
+                    line_list = line_list.split("=", 1)[0]  # delete irrep label at end of line 
+                    line_list = [i for i in line_list.split(" ") if i]
+
+                    # Check that trace line is complete, no ?? or errors
+                    if len(line_list) == num_ops + 1:  # symmops + band eigenval
+                        bnd = int([i for i in line[:3].split(" ") if i][0])  # band index
+                        ndg = int(line[5])  # band degeneracy
+
+                        evs = [i for i in line_list if i]
+                        bnd_ev = float(evs[0])
+                        inv_ev = evs[inv_num - 4]  # subtract bnd and ndg
+                        inv_ev = float(inv_ev[:4])  # delete imaginary part
+                        bnds.append(bnd)
+                        ndgs.append(ndg)
+                        bnd_evs.append(bnd_ev)
+                        inv_evs.append(inv_ev)
+
+                if line.startswith("**********************"):  # end of block
+                    trace_start = False
+                    kvec_data = {'band_index': bnds, 'band_degeneracy': ndgs,
+                        'band_eigenval': bnd_evs, 'inversion_eigenval': inv_evs}
+                    parity_eigenvals[trim_label] = kvec_data
+
+        # Set attributes
+        self.symmorphic = symmorphic
+        self.inversion = inversion
+        self.soc = soc
+        self.spin_polarized = spin_polarized
+        self.parity_eigenvals = parity_eigenvals
+                        
+        # except:
+        #     warnings.warn(
+        #         'irvsp output not found. Setting instance attributes from direct inputs!')
 
 
 class StructureDimensionality(MSONable):
