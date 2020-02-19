@@ -743,6 +743,8 @@ class IRVSPCaller:
             process = subprocess.Popen(
                 cmd_list, stdout=out, stderr=err)
 
+        process.communicate()  # pause while irvsp is executing
+        
         self.output = None
 
         # Process output
