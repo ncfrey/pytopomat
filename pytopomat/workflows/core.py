@@ -207,9 +207,10 @@ def wf_vasp2trace_magnetic(structure, c=None):
         tet_connections=None,
     )
 
+    wf_path = os.path.join(os.path.dirname(__file__), "vasp2trace_magnetic.yaml")
     wf = get_wf(
         structure,
-        "vasp2trace_magnetic.yaml",
+        wf_path,
         params=[
             {},
             {},

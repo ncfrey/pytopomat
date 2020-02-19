@@ -1,1 +1,2 @@
-include symmorphic_spacegroups.json
+include pytopomat/symmorphic_spacegroups.json
+include pytopomat/workflows/*.yaml
