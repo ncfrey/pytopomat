@@ -739,16 +739,10 @@ class IRVSPCaller:
         # Call irvsp
         os.chdir(folder_name)
         cmd_list = ["irvsp", "-sg", str(sgn), "-v", str(v)]
-        with open("outir.txt", "w") as out:
+        with open("outir.txt", "w") as out, open("err.txt", "w") as err:
             process = subprocess.Popen(
-                cmd_list, stdout=out)
+                cmd_list, stdout=out, stderr=err)
 
-        if process.returncode != 0:
-            raise RuntimeError(
-                "irvsp exited with return code {}.".format(process.returncode)
-            )
-
-        self._stdout = stdout
         self.output = None
 
         # Process output
