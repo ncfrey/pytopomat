@@ -22,9 +22,9 @@ setuptools.setup(
         "monty>=2.0.4",
         "atomate>=0.9.3",
         "custodian>=2019.8.24",
-        "FireWorks>=1.9.4",
-        "pandas>=0.25.1"
+        "FireWorks>=1.9.4"
     ],
+    include_package_data=True,
     keywords=["VASP", "topology", "topological", "materials", "science", "DFT"],
     classifiers=[
         "Programming Language :: Python :: 3",

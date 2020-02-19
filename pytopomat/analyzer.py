@@ -5,11 +5,11 @@ import logging
 import subprocess
 
 import numpy as np
-import pandas as pd
 
 from monty.json import MSONable
 from monty.dev import requires
 from monty.os.path import which
+from monty.serialization import loadfn
 from pymatgen.core.operations import SymmOp
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.dimensionality import (
@@ -200,7 +200,6 @@ class Vasp2TraceOutput(MSONable):
 
         self._parse_stdout(vasp2trace_output)
 
-
     def _parse_stdout(self, vasp2trace_output):
 
         try:
@@ -214,7 +213,9 @@ class Vasp2TraceOutput(MSONable):
                 symm_ops = np.ndarray.tolist(np.loadtxt(lines[3 : 3 + num_symm_ops]))
                 num_max_kvec = int(lines[3 + num_symm_ops])
                 kvecs = np.ndarray.tolist(
-                    np.loadtxt(lines[4 + num_symm_ops : 4 + num_symm_ops + num_max_kvec])
+                    np.loadtxt(
+                        lines[4 + num_symm_ops : 4 + num_symm_ops + num_max_kvec]
+                    )
                 )
 
                 # Dicts with kvec index as keys
@@ -257,7 +258,8 @@ class Vasp2TraceOutput(MSONable):
                     traces[str(idx)] = trace
         except:
             warnings.warn(
-                'Vasp2trace output not found. Setting instance attributes from direct inputs!')
+                "Vasp2trace output not found. Setting instance attributes from direct inputs!"
+            )
 
 
 class BandParity(MSONable):
@@ -306,15 +308,13 @@ class BandParity(MSONable):
             self.trim_data = {}
 
             # Up spin
-            parity_op_index_up = self._get_parity_op(
-                self.v2t_output["up"].symm_ops)
+            parity_op_index_up = self._get_parity_op(self.v2t_output["up"].symm_ops)
             self.trim_data["up"] = self.get_trim_data(
                 parity_op_index_up, self.v2t_output["up"]
             )
 
             # Down spin
-            parity_op_index_dn = self._get_parity_op(
-                self.v2t_output["down"].symm_ops)
+            parity_op_index_dn = self._get_parity_op(self.v2t_output["down"].symm_ops)
             self.trim_data["down"] = self.get_trim_data(
                 parity_op_index_dn, self.v2t_output["down"]
             )
@@ -322,8 +322,7 @@ class BandParity(MSONable):
         else:
             self.trim_data = {}
 
-            parity_op_index = self._get_parity_op(
-                self.v2t_output["up"].symm_ops)
+            parity_op_index = self._get_parity_op(self.v2t_output["up"].symm_ops)
             self.trim_data["up"] = self.get_trim_data(
                 parity_op_index, self.v2t_output["up"]
             )
@@ -345,14 +344,14 @@ class BandParity(MSONable):
 
         parity_op_index = None
 
-
-
         for idx, symm_op in enumerate(symm_ops):
             try:
                 rot_mat = symm_op[0:9]  # Rotation matrix
                 trans_mat = symm_op[9:12]  # Translation matrix
             except TypeError:
-                raise RuntimeError("No non-trivial symmetry operations in vasp2trace output!")
+                raise RuntimeError(
+                    "No non-trivial symmetry operations in vasp2trace output!"
+                )
 
             # Find the parity operator
             if np.array_equal(rot_mat, parity_mat):
@@ -403,8 +402,10 @@ class BandParity(MSONable):
             trim_pt: trim_label for trim_pt, trim_label in zip(trim_pts, trim_labels)
         }
 
-        trim_data = {trim_label: {'energies': [], 'iden': [], 'parity': []}
-                     for trim_label in trim_labels}
+        trim_data = {
+            trim_label: {"energies": [], "iden": [], "parity": []}
+            for trim_label in trim_labels
+        }
 
         for idx, kvec in enumerate(v2to.kvecs):
             for trim_pt, trim_label in trims.items():
@@ -423,11 +424,9 @@ class BandParity(MSONable):
                         band_iden_eigenval = band[3]
                         band_energy = band[2]
 
-                        trim_data[trim_label]['parity'].append(
-                            band_parity_eigenval)
-                        trim_data[trim_label]['iden'].append(
-                            band_iden_eigenval)
-                        trim_data[trim_label]['energies'].append(band_energy)
+                        trim_data[trim_label]["parity"].append(band_parity_eigenval)
+                        trim_data[trim_label]["iden"].append(band_iden_eigenval)
+                        trim_data[trim_label]["energies"].append(band_energy)
 
         return trim_data
 
@@ -446,16 +445,15 @@ class BandParity(MSONable):
 
         trim_parities, trim_energies = self._format_parity_data()
 
-        iband = self._get_band_subspace(tol=tol,
-                                        trim_energies_formatted=trim_energies)
-        print("Only considering last %i pairs of bands." % (iband-1))
+        iband = self._get_band_subspace(tol=tol, trim_energies_formatted=trim_energies)
+        print("Only considering last %i pairs of bands." % (iband - 1))
 
         if len(trim_labels) == 8:
             Z2 = np.ones(4, dtype=int)
 
             for label in trim_labels:
                 delta = 1
-                for parity in trim_parities[label][:(-1*iband):-1]:
+                for parity in trim_parities[label][: (-1 * iband) : -1]:
                     delta *= parity
 
                 Z2[0] *= delta
@@ -474,7 +472,7 @@ class BandParity(MSONable):
 
             for label in trim_labels:
                 delta = 1
-                for parity in trim_parities[label][:(-1*iband):-1]:
+                for parity in trim_parities[label][: (-1 * iband) : -1]:
                     delta *= parity
 
                 Z2 *= delta
@@ -482,8 +480,7 @@ class BandParity(MSONable):
             return ((Z2 - 1) / -2) + 0
 
         else:
-            raise RuntimeError(
-                "Incorrect number of k-points in vasp2trace output.")
+            raise RuntimeError("Incorrect number of k-points in vasp2trace output.")
 
     def _format_parity_data(self):
         """
@@ -497,19 +494,21 @@ class BandParity(MSONable):
         trim_energies_formatted = {}
 
         for label in trim_labels:
-            trim_parities_formatted[label] = np.zeros(int(nele/2))
-            trim_energies_formatted[label] = np.zeros(int(nele/2))
+            trim_parities_formatted[label] = np.zeros(int(nele / 2))
+            trim_energies_formatted[label] = np.zeros(int(nele / 2))
             count = 0
 
-
             if np.any([int(i) == 1 for i in self.trim_data["up"][label]["iden"][:]]):
-                raise RuntimeError('Vasp2trace does not show completely degenrate bands at %s.' % label)
+                raise RuntimeError(
+                    "Vasp2trace does not show completely degenrate bands at %s." % label
+                )
 
             iden_sum = int(np.sum(self.trim_data["up"][label]["iden"][:]))
-            if nele < iden_sum and \
-               int(self.trim_data["up"][label]["parity"][-1]) == 0:
+            if nele < iden_sum and int(self.trim_data["up"][label]["parity"][-1]) == 0:
                 raise RuntimeError(
-                    'Cannot tell the parity of the highest occupied state at %s.' % label)
+                    "Cannot tell the parity of the highest occupied state at %s."
+                    % label
+                )
 
             for i in range(len(self.trim_data["up"][label]["energies"])):
                 iden = int(self.trim_data["up"][label]["iden"][i])
@@ -517,15 +516,14 @@ class BandParity(MSONable):
                 energy = self.trim_data["up"][label]["energies"][i]
 
                 if iden == 2:
-                    trim_parities_formatted[label][count] = parity/abs(parity)
+                    trim_parities_formatted[label][count] = parity / abs(parity)
                     trim_energies_formatted[label][count] = energy
                     count += 1
 
                 elif iden > 2:
-                    for j in range(int(abs(iden)/2)):
+                    for j in range(int(abs(iden) / 2)):
                         if abs(parity) > 1.0:
-                            trim_parities_formatted[label][count] = parity / \
-                                abs(parity)
+                            trim_parities_formatted[label][count] = parity / abs(parity)
                             trim_energies_formatted[label][count] = energy
 
                         else:  # - Make zeros from four-fold degenerate states equal to -1
@@ -537,7 +535,7 @@ class BandParity(MSONable):
                                 trim_energies_formatted[label][count] = energy
 
                         count += 1
-                        if count == nele/2:
+                        if count == nele / 2:
                             break
 
         return trim_parities_formatted, trim_energies_formatted
@@ -561,7 +559,7 @@ class BandParity(MSONable):
         nbands = len(trim_energies_formatted[points[0]])
 
         if tol == -1:
-            return (nbands+1)
+            return nbands + 1
         else:
             points = [key for key in trim_energies_formatted.keys()]
             delta_e = {}
@@ -572,15 +570,15 @@ class BandParity(MSONable):
             nbands = len(trim_energies_formatted[points[0]])
 
             for band_num in reversed(range(nbands - 1)):
-                diff = abs(band_energies[band_num + 1] -
-                           band_energies[band_num])
+                diff = abs(band_energies[band_num + 1] - band_energies[band_num])
 
                 if diff >= tol:
                     for point in points:
                         band_energies2 = trim_energies_formatted[point]
 
                         diff2 = abs(
-                            band_energies2[band_num + 1] - band_energies2[band_num])
+                            band_energies2[band_num + 1] - band_energies2[band_num]
+                        )
 
                         if diff2 < tol:
                             break
@@ -591,7 +589,7 @@ class BandParity(MSONable):
                 if mark is not None:
                     break
 
-            return (nbands-mark)
+            return nbands - mark
 
     @staticmethod
     def screen_semimetal(trim_parities):
@@ -731,7 +729,8 @@ class IRVSPCaller:
 
         # Check if symmorphic (same symm elements as corresponding point group)
         # REF: http://kuchem.kyoto-u.ac.jp/kinso/weda/data/group/space.pdf
-        ssgs = pd.read_csv('symmorphic_spacegroups.csv', header=None).iloc[:,0].tolist()
+        fpath = os.path.join(os.path.dirname(__file__), "symmorphic_spacegroups.json")
+        ssgs = loadfn(fpath)["ssgs"]
         if sgn in ssgs:
             v = 1  # irvsp1 for symmorphic
         else:
@@ -802,7 +801,6 @@ class IRVSPOutput(MSONable):
 
         self._parse_stdout(irvsp_output)
 
-
     def _parse_stdout(self, irvsp_output):
 
         # try:
@@ -869,17 +867,21 @@ class IRVSPOutput(MSONable):
                     bnds, ndgs, bnd_evs, inv_evs = [], [], [], []
                     line_list = line.strip().split(" ")
                     symmops = [i for i in line_list if i]
-                    inv_num = symmops.index('I')
-                    num_ops = len(symmops) - 3 # subtract bnd, ndg, ev 
+                    inv_num = symmops.index("I")
+                    num_ops = len(symmops) - 3  # subtract bnd, ndg, ev
 
-                if trace_start and '0' in line:  # full trace line, not a blank line
+                if trace_start and "0" in line:  # full trace line, not a blank line
                     line_list = line[6:].strip()
-                    line_list = line_list.split("=", 1)[0]  # delete irrep label at end of line 
+                    line_list = line_list.split("=", 1)[
+                        0
+                    ]  # delete irrep label at end of line
                     line_list = [i for i in line_list.split(" ") if i]
 
                     # Check that trace line is complete, no ?? or errors
                     if len(line_list) == num_ops + 1:  # symmops + band eigenval
-                        bnd = int([i for i in line[:3].split(" ") if i][0])  # band index
+                        bnd = int(
+                            [i for i in line[:3].split(" ") if i][0]
+                        )  # band index
                         ndg = int(line[5])  # band degeneracy
 
                         evs = [i for i in line_list if i]
@@ -893,8 +895,12 @@ class IRVSPOutput(MSONable):
 
                 if line.startswith("**********************"):  # end of block
                     trace_start = False
-                    kvec_data = {'band_index': bnds, 'band_degeneracy': ndgs,
-                        'band_eigenval': bnd_evs, 'inversion_eigenval': inv_evs}
+                    kvec_data = {
+                        "band_index": bnds,
+                        "band_degeneracy": ndgs,
+                        "band_eigenval": bnd_evs,
+                        "inversion_eigenval": inv_evs,
+                    }
                     parity_eigenvals[trim_label] = kvec_data
 
         # Set attributes
@@ -903,7 +909,7 @@ class IRVSPOutput(MSONable):
         self.soc = soc
         self.spin_polarized = spin_polarized
         self.parity_eigenvals = parity_eigenvals
-                        
+
         # except:
         #     warnings.warn(
         #         'irvsp output not found. Setting instance attributes from direct inputs!')
