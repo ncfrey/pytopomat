@@ -738,16 +738,10 @@ class IRVSPCaller:
 
         # Call irvsp
         os.chdir(folder_name)
-        cmd_list = ["irvsp", "-sg", str(sgn), "-v", str(v), ">", "outir.txt"]
-        process = subprocess.Popen(
-            [cmd_list], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-        stdout, stderr = process.communicate()
-        stdout = stdout.decode()
-
-        if stderr:
-            stderr = stderr.decode()
-            warnings.warn(stderr)
+        cmd_list = ["irvsp", "-sg", str(sgn), "-v", str(v)]
+        with open("outir.txt", "w") as out:
+            process = subprocess.Popen(
+                [cmd_list], stdout=out)
 
         if process.returncode != 0:
             raise RuntimeError(
@@ -755,7 +749,6 @@ class IRVSPCaller:
             )
 
         self._stdout = stdout
-        self._stderr = stderr
         self.output = None
 
         # Process output
