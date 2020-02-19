@@ -741,7 +741,7 @@ class IRVSPCaller:
         cmd_list = ["irvsp", "-sg", str(sgn), "-v", str(v)]
         with open("outir.txt", "w") as out:
             process = subprocess.Popen(
-                [cmd_list], stdout=out)
+                cmd_list, stdout=out)
 
         if process.returncode != 0:
             raise RuntimeError(
