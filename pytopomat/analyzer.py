@@ -5,6 +5,7 @@ import logging
 import subprocess
 
 import numpy as np
+import pandas as pd
 
 from monty.json import MSONable
 from monty.dev import requires

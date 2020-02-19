@@ -22,7 +22,8 @@ setuptools.setup(
         "monty>=2.0.4",
         "atomate>=0.9.3",
         "custodian>=2019.8.24",
-        "FireWorks>=1.9.4"
+        "FireWorks>=1.9.4",
+        "pandas>=0.25.1"
     ],
     keywords=["VASP", "topology", "topological", "materials", "science", "DFT"],
     classifiers=[
