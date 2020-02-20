@@ -719,32 +719,34 @@ class IRVSPCaller:
         # Check for OUTCAR and WAVECAR
         if not path.isfile(folder_name + "/OUTCAR") or not path.isfile(
             folder_name + "/WAVECAR"
-        ):
+        ) or not path.isfile(folder_name + "/POSCAR"):
             raise FileNotFoundError()
+
+        os.chdir(folder_name)
 
         # Get sg number of structure
         s = Structure.from_file("POSCAR")
         sga = SpacegroupAnalyzer(s, symprec=0.01)
         sgn = sga.get_space_group_number()
+        v = 1  # version 1 of irvsp, symmorphic symmetries
 
         # Check if symmorphic (same symm elements as corresponding point group)
         # REF: http://kuchem.kyoto-u.ac.jp/kinso/weda/data/group/space.pdf
         fpath = os.path.join(os.path.dirname(__file__), "symmorphic_spacegroups.json")
         ssgs = loadfn(fpath)["ssgs"]
-        if sgn in ssgs:
-            v = 1  # irvsp1 for symmorphic
-        else:
-            v = 2  # irvsp2 for non-symmorphic
+
+        # Remove SGOs from OUTCAR other than identity and inversion to avoid errors
+        if sgn not in ssgs:  # non-symmorphic
+            self.modify_outcar()
+            sgn = 2  # SG 2 (only E and I)
 
         # Call irvsp
-        os.chdir(folder_name)
         cmd_list = ["irvsp", "-sg", str(sgn), "-v", str(v)]
         with open("outir.txt", "w") as out, open("err.txt", "w") as err:
-            process = subprocess.Popen(
-                cmd_list, stdout=out, stderr=err)
+            process = subprocess.Popen(cmd_list, stdout=out, stderr=err)
 
         process.communicate()  # pause while irvsp is executing
-        
+
         self.output = None
 
         # Process output
@@ -753,6 +755,40 @@ class IRVSPCaller:
 
         else:
             raise FileNotFoundError()
+
+    @staticmethod
+    def modify_outcar(name="OUTCAR.bkp"):
+        """
+        For a non-symmorphic material, delete all space group ops from OUTCAR except for identity (E)
+        and inversion (I). This allows the command "irvsp -sg 2 -v 1" to compute only I eigenvalues.
+
+        Must be run in a directory with OUTCAR.
+
+        Args:
+            name (str): Name for unmodified copy of OUTCAR.
+        """
+
+        # Check for OUTCAR and WAVECAR
+        if not path.isfile("OUTCAR"):
+            raise FileNotFoundError()
+
+        sgo_lines = []  # OUTCAR lines with superfluous SGOs
+
+        # Write a temp file without the extra SGOs
+        with open("OUTCAR", "r") as f:
+            with open("temp.txt", "w") as output:
+                lines = f.readlines()
+
+                for idx, line in enumerate(lines):
+                    if "INISYM" in line:
+                        num_ops = int(line.strip().split(" ")[4])
+                    if "irot" in line:  # Start of SGOs
+                        sgo_lines = list(range(idx + 3, idx + num_ops + 1))
+                    if idx not in sgo_lines:
+                        output.write(line)
+
+        os.rename("OUTCAR", name)
+        os.rename("temp.txt", "OUTCAR")
 
 
 class IRVSPOutput(MSONable):
