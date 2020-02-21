@@ -892,7 +892,7 @@ class IRVSPOutput(MSONable):
                     bnds, ndgs, bnd_evs, inv_evs = [], [], [], []
                     line_list = line.strip().split(" ")
                     symmops = [i for i in line_list if i]
-                    inv_num = symmops.index("I")
+                    inv_num = symmops.index("I") - 3  # subtract bnd, ndg, ev
                     num_ops = len(symmops) - 3  # subtract bnd, ndg, ev
 
                 if trace_start and "0" in line:  # full trace line, not a blank line
@@ -911,7 +911,7 @@ class IRVSPOutput(MSONable):
 
                         evs = [i for i in line_list if i]
                         bnd_ev = float(evs[0])
-                        inv_ev = evs[inv_num - 4]  # subtract bnd and ndg
+                        inv_ev = evs[inv_num + 1]
                         inv_ev = float(inv_ev[:4])  # delete imaginary part
                         bnds.append(bnd)
                         ndgs.append(ndg)
