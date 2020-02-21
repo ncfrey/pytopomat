@@ -8,17 +8,79 @@ from pymatgen import Structure
 from atomate.vasp.config import VASP_CMD, DB_FILE
 from atomate.common.firetasks.glue_tasks import PassCalcLocs, CopyFiles
 from atomate.vasp.firetasks.parse_outputs import VaspToDb
+from atomate.vasp.firetasks.glue_tasks import CopyVaspOutputs
 
 from pytopomat.workflows.firetasks import (
+    RunIRVSP,
+    IRVSPToDb,
     Vasp2TraceToDb,
     RunVasp2Trace,
-    CopyVaspOutputs,
     Z2PackToDb,
     SetUpZ2Pack,
     RunZ2Pack,
     WriteWannier90Win,
     InvariantsToDB,
 )
+
+
+class IrvspFW(Firework):
+    def __init__(
+        self,
+        parents=None,
+        structure=None,
+        name="irvsp",
+        db_file=None,
+        prev_calc_dir=None,
+        irvsp_out=None,
+        vasp_cmd=None,
+        **kwargs
+    ):
+        """
+        Run IRVSP and parse the output data. Assumes you have a previous FW with the 
+        calc_locs passed into the current FW.
+
+        Args:
+            structure (Structure): - only used for setting name of FW
+            name (str): name of this FW
+            db_file (str): path to the db file
+            parents (Firework): Parents of this particular Firework. FW or list of FWS.
+            prev_calc_dir (str): Path to a previous calculation to copy from
+            \*\*kwargs: Other kwargs that are passed to Firework.__init__.
+        """
+        fw_name = "{}-{}".format(
+            structure.composition.reduced_formula if structure else "unknown", name
+        )
+
+        t = []
+
+        if prev_calc_dir:
+            t.append(
+                CopyVaspOutputs(
+                    calc_dir=prev_calc_dir,
+                    additional_files=["CHGCAR", "WAVECAR"],
+                    contcar_to_poscar=True,
+                )
+            )
+        elif parents:
+            t.append(
+                CopyVaspOutputs(
+                    calc_loc=True,
+                    additional_files=["CHGCAR", "WAVECAR"],
+                    contcar_to_poscar=True,
+                )
+            )
+        else:
+            raise ValueError("Must specify structure or previous calculation")
+
+        t.extend(
+            [
+                RunIRVSP(),
+                PassCalcLocs(name=name),
+                IRVSPToDb(db_file=db_file, irvsp_out=irvsp_out),
+            ]
+        )
+
+        super(IrvspFW, self).__init__(t, parents=parents, name=fw_name, **kwargs)
 
 
 class Vasp2TraceFW(Firework):
