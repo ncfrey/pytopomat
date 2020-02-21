@@ -264,6 +264,13 @@ class IRVSPOutput(MSONable):
                             "inversion_eigenval": inv_evs,
                         }
                         parity_eigenvals[trim_label] = kvec_data
+
+            self.symmorphic = symmorphic
+            self.inversion = inversion
+            self.soc = soc
+            self.spin_polarized = spin_polarized
+            self.parity_eigenvals = parity_eigenvals
+            
         except:
             warnings.warn(
                 "irvsp output not found. Setting instance attributes from direct inputs!"
