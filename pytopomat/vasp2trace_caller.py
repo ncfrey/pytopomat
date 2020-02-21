@@ -243,7 +243,19 @@ class Vasp2TraceOutput(MSONable):
 
                     trace = np.ndarray.tolist(np.loadtxt(trace_str))
                     traces[str(idx)] = trace
-        except:
+
+            self.num_occ_bands = num_occ_bands
+            self.soc = soc
+            self.num_symm_ops = num_symm_ops
+            self.symm_ops = symm_ops
+            self.num_max_kvec = num_max_kvec
+            self.kvecs = kvecs
+            self.num_kvec_symm_ops = num_kvec_symm_ops
+            self.symm_ops_in_little_cogroup = symm_ops_in_little_cogroup
+            self.traces = traces
+
+        except Exception as error:
+            print(error)
             warnings.warn(
                 "Vasp2trace output not found. Setting instance attributes from direct inputs!"
             )
