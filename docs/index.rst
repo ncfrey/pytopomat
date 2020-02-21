@@ -1,10 +1,9 @@
-.. pytopomat documentation master file, created by
-   sphinx-quickstart on Fri Feb 21 15:23:53 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Welcome to pytopomat's documentation!
 =====================================
+
+.. automodule:: pytopomat.z2pack_caller
+    :members:
+
 
 .. toctree::
    :maxdepth: 2
@@ -20,7 +19,7 @@ Indices and tables
 * :ref:`search`
 
 pytopomat
-========
+=========
 
 Python Topological Materials (pytopomat) is a code for easy, high-throughput analysis of topological materials. 
 
