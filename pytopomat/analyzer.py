@@ -1,5 +1,7 @@
 import numpy as np
 
+import warnings
+
 from monty.json import MSONable
 
 from pymatgen.analysis.local_env import MinimumDistanceNN
@@ -25,7 +27,7 @@ __status__ = "Development"
 __date__ = "August 2019"
 
 
-class Vasp2TraceBandParity(MSONable):
+class BandParity(MSONable):
     def __init__(self, v2t_output=None, trim_data=None, spin_polarized=None):
         """
         Determine parity of occupied bands at TRIM points with vasp2trace to calculate the Z2 topological invariant for centrosymmetric materials.
@@ -206,7 +208,9 @@ class Vasp2TraceBandParity(MSONable):
 
         trim_labels = [key for key in self.trim_data["up"].keys()]
 
-        trim_parities, trim_energies = self._format_parity_data()
+        trim_parities_set, trim_energies_set = self._format_parity_data()
+        trim_parities = trim_parities_set["up"]
+        trim_energies = trim_energies_set["up"]
 
         iband = self._get_band_subspace(tol=tol, trim_energies_formatted=trim_energies)
         print("Only considering last %i pairs of bands." % (iband - 1))
@@ -250,56 +254,125 @@ class Vasp2TraceBandParity(MSONable):
         Format parity data to account for degeneracies.
 
         """
-        trim_labels = [key for key in self.trim_data["up"].keys()]
 
+        spin_polarized = self.spin_polarized
+
+        trim_labels = [key for key in self.trim_data["up"].keys()]
         nele = self.v2t_output["up"].num_occ_bands
-        trim_parities_formatted = {}
-        trim_energies_formatted = {}
+
+        if not spin_polarized:
+            spins = ["up"]
+            criteria = nele / 2
+        else:
+            spins = ["up", "down"]
+            criteria = nele
+
+        trim_parities_formatted = {spin: {} for spin in spins}
+        trim_energies_formatted = {spin: {} for spin in spins}
 
         for label in trim_labels:
-            trim_parities_formatted[label] = np.zeros(int(nele / 2))
-            trim_energies_formatted[label] = np.zeros(int(nele / 2))
-            count = 0
+            for spin in spins:
+                trim_parities_formatted[spin][label] = np.zeros(int(criteria))
+                trim_energies_formatted[spin][label] = np.zeros(int(criteria))
+                count = 0
 
-            if np.any([int(i) == 1 for i in self.trim_data["up"][label]["iden"][:]]):
-                raise RuntimeError(
-                    "Vasp2trace does not show completely degenrate bands at %s." % label
-                )
+                if not spin_polarized:
+                    if np.any(
+                        [int(i) == 1 for i in self.trim_data[spin][label]["iden"][:]]
+                    ):
+                        raise RuntimeError(
+                            "Non-spin polarized selected, but trace data does not show doubly degenerate bands at %s."
+                            % label
+                        )
 
-            iden_sum = int(np.sum(self.trim_data["up"][label]["iden"][:]))
-            if nele < iden_sum and int(self.trim_data["up"][label]["parity"][-1]) == 0:
-                raise RuntimeError(
-                    "Cannot tell the parity of the highest occupied state at %s."
-                    % label
-                )
+                    iden_sum = int(np.sum(self.trim_data[spin][label]["iden"][:]))
+                    if (
+                        nele < iden_sum
+                        and int(self.trim_data["up"][label]["parity"][-1]) == 0
+                    ):
+                        raise RuntimeError(
+                            "Cannot tell the parity of the highest occupied state at %s."
+                            % label
+                        )
+                else:
+                    if np.all(
+                        [int(i) != 1.0 for i in self.trim_data[spin][label]["iden"][:]]
+                    ):
+                        warnings.warn(
+                            "Spin polarized selected, but at least one TRIM point shows all doubly degenerate bands."
+                        )
 
-            for i in range(len(self.trim_data["up"][label]["energies"])):
-                iden = int(self.trim_data["up"][label]["iden"][i])
-                parity = int(self.trim_data["up"][label]["parity"][i])
-                energy = self.trim_data["up"][label]["energies"][i]
+                    iden_sum = int(np.sum(self.trim_data[spin][label]["iden"][:]))
+                    if (
+                        nele < iden_sum
+                        and int(self.trim_data[spin][label]["parity"][-1]) > 1
+                    ):
+                        raise RuntimeError(
+                            "Cannot tell the parity of the highest occupied state at %s."
+                            % label
+                        )
 
-                if iden == 2:
-                    trim_parities_formatted[label][count] = parity / abs(parity)
-                    trim_energies_formatted[label][count] = energy
-                    count += 1
+                for i in range(len(self.trim_data[spin][label]["energies"])):
+                    iden = int(self.trim_data[spin][label]["iden"][i])
+                    parity = int(self.trim_data[spin][label]["parity"][i])
+                    energy = self.trim_data[spin][label]["energies"][i]
 
-                elif iden > 2:
-                    for j in range(int(abs(iden) / 2)):
-                        if abs(parity) > 1.0:
-                            trim_parities_formatted[label][count] = parity / abs(parity)
-                            trim_energies_formatted[label][count] = energy
+                    if iden == 2:
+                        if not spin_polarized:
+                            trim_parities_formatted[spin][label][count] = parity / abs(
+                                parity
+                            )
+                            trim_energies_formatted[spin][label][count] = energy
+                            count += 1
+                        else:
+                            for j in range(0, 2):
+                                if parity != 0:
+                                    trim_parities_formatted[spin][label][
+                                        count
+                                    ] = parity / abs(parity)
+                                    trim_energies_formatted[spin][label][count] = energy
 
-                        else:  # - Make zeros from four-fold degenerate states equal to -1
-                            if j == 0:
-                                trim_parities_formatted[label][count] = -1
-                                trim_energies_formatted[label][count] = energy
-                            else:
-                                trim_parities_formatted[label][count] = 1
-                                trim_energies_formatted[label][count] = energy
+                                else:  # - Make zeros from two-fold degenerate states equal to -1
+                                    if j == 0:
+                                        trim_parities_formatted[spin][label][count] = -1
+                                        trim_energies_formatted[spin][label][
+                                            count
+                                        ] = energy
+                                    else:
+                                        trim_parities_formatted[spin][label][count] = 1
+                                        trim_energies_formatted[spin][label][
+                                            count
+                                        ] = energy
+
+                                count += 1
+                                if count == criteria:
+                                    break
+
+                    elif iden > 2:
+                        for j in range(int(abs(iden) / 2)):
+                            if abs(parity) > 1.0:
+                                trim_parities_formatted[spin][label][
+                                    count
+                                ] = parity / abs(parity)
+                                trim_energies_formatted[spin][label][count] = energy
+
+                            else:  # - Make zeros from four-fold degenerate states equal to -1
+                                if j == 0:
+                                    trim_parities_formatted[spin][label][count] = -1
+                                    trim_energies_formatted[spin][label][count] = energy
+                                else:
+                                    trim_parities_formatted[spin][label][count] = 1
+                                    trim_energies_formatted[spin][label][count] = energy
+
+                            count += 1
+                            if count == criteria:
+                                break
+
+                    elif iden == 1:
+                        trim_parities_formatted[spin][label][count] = parity
+                        trim_energies_formatted[spin][label][count] = energy
 
                         count += 1
-                        if count == nele / 2:
-                            break
 
         return trim_parities_formatted, trim_energies_formatted
 
@@ -354,25 +427,23 @@ class Vasp2TraceBandParity(MSONable):
 
             return nbands - mark
 
-    @staticmethod
-    def screen_semimetal(trim_parities):
+    def screen_semimetal(self):
         """
         Parity criteria screening for metallic band structures to predict if nonmagnetic Weyl semimetal phase is allowed.
-
-        Args:
-            trim_parities (dict): non-spin-polarized trim parities.
 
         Returns:
             semimetal (int): -1 (system MIGHT be a semimetal) or 1 (not a semimetal).
 
         """
 
+        trim_parities, trim_energies = self._format_parity_data()
+
         # Count total number of odd parity states over all TRIMs
         num_odd_states = 0
 
-        for trim_label, band_parities in trim_parities["up"].items():
+        for trim_label, parities in trim_parities["up"].items():
             num_odd_at_trim = np.sum(
-                np.fromiter((1 for i in band_parities if i < 0), dtype=int)
+                np.fromiter((1 for i in parities if i < 0), dtype=int)
             )
 
             num_odd_states += num_odd_at_trim
@@ -384,8 +455,7 @@ class Vasp2TraceBandParity(MSONable):
 
         return semimetal
 
-    @staticmethod
-    def screen_magnetic_parity(trim_parities):
+    def screen_magnetic_parity(self):
         """
         Screen candidate inversion-symmetric magnetic topological materials from band parity criteria.
 
@@ -402,6 +472,8 @@ class Vasp2TraceBandParity(MSONable):
             mag_screen (dict): Magnetic topological properties from band parities.
 
         """
+
+        trim_parities, trim_energies = self._format_parity_data()
 
         mag_screen = {
             "insulator": False,
