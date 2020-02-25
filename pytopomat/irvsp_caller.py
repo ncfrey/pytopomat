@@ -193,6 +193,11 @@ class IRVSPOutput(MSONable):
                 else:
                     spin_polarized = True
 
+                self.symmorphic = symmorphic
+                self.inversion = inversion
+                self.soc = soc
+                self.spin_polarized = spin_polarized
+
                 # Define TRIM labels in units of primitive reciprocal vectors
                 trim_labels = ["gamma", "x", "y", "z", "s", "t", "u", "r"]
                 trim_pts = [
@@ -263,14 +268,17 @@ class IRVSPOutput(MSONable):
                             "band_eigenval": bnd_evs,
                             "inversion_eigenval": inv_evs,
                         }
-                        parity_eigenvals[trim_label] = kvec_data
 
-            self.symmorphic = symmorphic
-            self.inversion = inversion
-            self.soc = soc
-            self.spin_polarized = spin_polarized
+                        if self.spin_polarized:
+                            if trim_label in parity_eigenvals.keys():
+                                parity_eigenvals[trim_label]["down"] = kvec_data
+                            else:
+                                parity_eigenvals[trim_label] = {"up": kvec_data}
+                        else:
+                            parity_eigenvals[trim_label] = kvec_data
+
             self.parity_eigenvals = parity_eigenvals
-            
+
         except:
             warnings.warn(
                 "irvsp output not found. Setting instance attributes from direct inputs!"
