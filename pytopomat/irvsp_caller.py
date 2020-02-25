@@ -218,7 +218,7 @@ class IRVSPOutput(MSONable):
 
                 # Start of irrep trace info
                 for idx, line in enumerate(lines):
-                    if line.startswith("**********************"):
+                    if "*****" in line:
                         block_start = idx + 1
                         break
 
@@ -260,7 +260,7 @@ class IRVSPOutput(MSONable):
                             bnd_evs.append(bnd_ev)
                             inv_evs.append(inv_ev)
 
-                    if line.startswith("**********************"):  # end of block
+                    if "*****" in line:  # end of block
                         trace_start = False
                         kvec_data = {
                             "band_index": bnds,
