@@ -1,4 +1,6 @@
 import os
+import warnings
+
 import z2pack
 from monty.json import MSONable, jsanitize
 from monty.serialization import loadfn, dumpfn
@@ -133,7 +135,7 @@ class Z2PackCaller:
 
 
 class Z2Output(MSONable):
-    def __init__(self, result, surface, result_dict=None, chern_number=None, z2_invariant=None):
+    def __init__(self, result=None, surface=None, result_dict=None, chern_number=None, z2_invariant=None):
         """
         Class for storing results of band topology analysis.
 
@@ -152,6 +154,8 @@ class Z2Output(MSONable):
         self.chern_number = chern_number
         self.z2_invariant = z2_invariant
 
+        self._parse_result(result)
+
     def as_dict(self):
         """
         Sanitization required for z2pack SurfaceResult object.
@@ -164,11 +168,8 @@ class Z2Output(MSONable):
         d["result"] = jsanitize(self.result)
         d["surface"] = self.surface
         d["result_dict"] = self._result_to_dict(self.result)
-
-        chern_number, z2_invariant = self._parse_result(self.result)
-
-        d["chern_number"] = chern_number
-        d["z2_invariant"] = z2_invariant
+        d["chern_number"] = self.chern_number
+        d["z2_invariant"] = self.z2_invariant
 
         return d
 
@@ -204,11 +205,20 @@ class Z2Output(MSONable):
 
     def _parse_result(self, result):
 
-        # Topological invariants
-        chern_number = z2pack.invariant.chern(result)
-        z2_invariant = z2pack.invariant.z2(result)
+        try:
 
-        return chern_number, z2_invariant
+            # Topological invariants
+            chern_number = z2pack.invariant.chern(result)
+            z2_invariant = z2pack.invariant.z2(result)
+
+            self.chern_number = chern_number
+            self.z2_invariant = z2_invariant
+
+        except Exception as error:
+            print(error)
+            warnings.warn(
+                "Z2Pack result not found. Setting instance attributes from direct inputs!"
+            )
 
 
 

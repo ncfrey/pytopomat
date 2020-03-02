@@ -118,7 +118,8 @@ class IRVSPCaller:
 
                 for idx, line in enumerate(lines):
                     if "INISYM" in line:
-                        num_ops = int(line.strip().split(" ")[4])
+                        line_list = [i for i in line.strip().split(" ") if i]
+                        num_ops = int(line_list[4])
                     if "irot" in line:  # Start of SGOs
                         sgo_lines = list(range(idx + 3, idx + num_ops + 1))
                     if idx not in sgo_lines:
