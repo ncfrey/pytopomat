@@ -1,3 +1,9 @@
+"""
+Interface to Z2Pack.
+
+"""
+
+
 import os
 import warnings
 
@@ -5,9 +11,6 @@ import z2pack
 from monty.json import MSONable, jsanitize
 from monty.serialization import loadfn, dumpfn
 
-"""
-This module offers a high level framework for analyzing topological materials in a high-throughput context with VASP and Z2Pack.
-"""
 
 __author__ = "Nathan C. Frey, Jason Munro"
 __copyright__ = "MIT License"

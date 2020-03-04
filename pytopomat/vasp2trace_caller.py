@@ -1,3 +1,8 @@
+"""
+Interface to vasp2trace.
+
+"""
+
 import warnings
 import os
 from os import path
@@ -8,12 +13,6 @@ import numpy as np
 from monty.json import MSONable
 from monty.dev import requires
 from monty.os.path import which
-
-"""
-This module offers a high level framework for analyzing topological materials in a 
-high-throughput context with VASP, Z2Pack, irvsp, and Vasp2Trace.
-
-"""
 
 __author__ = "Nathan C. Frey, Jason Munro"
 __copyright__ = "MIT License"

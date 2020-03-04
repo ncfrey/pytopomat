@@ -1,3 +1,8 @@
+"""
+Interface to irvsp.
+
+"""
+
 import warnings
 import os
 from os import path
@@ -10,12 +15,6 @@ from monty.serialization import loadfn
 
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.core import Structure
-
-"""
-This module offers a high level framework for analyzing topological materials in a 
-high-throughput context with VASP, Z2Pack, irvsp, and Vasp2Trace.
-
-"""
 
 __author__ = "Nathan C. Frey, Jason Munro"
 __copyright__ = "MIT License"

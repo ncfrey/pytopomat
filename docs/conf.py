@@ -14,7 +14,7 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../pytopomat'))
 
 import pytopomat
 
@@ -39,7 +39,20 @@ release = ''
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.viewcode',
+                'sphinx.ext.intersphinx', 
+                'sphinx.ext.napoleon', 'sphinx.ext.autosummary']
+
+## Include Python objects as they appear in source files
+## Default: alphabetically ('alphabetical')
+autodoc_member_order = 'bysource'
+## Default flags used by autodoc directives
+autodoc_default_flags = ['members', 'show-inheritance']
+autoclass_content = 'init'
+## Generate autodoc stubs with summaries from code
+autosummary_generate = True
+
+#napoleon_include_init_with_doc = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -80,7 +93,13 @@ html_theme = 'alabaster'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'github_button': True,
+    'github_type': 'star&v=2',
+    'github_user': 'ncfrey',
+    'github_repo': 'pytopomat',
+    'github_banner': True,
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -95,7 +114,13 @@ html_static_path = ['_static']
 # default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
 # 'searchbox.html']``.
 #
-# html_sidebars = {}
+html_sidebars = {    
+    '**': [
+        'about.html',
+        'navigation.html',
+        'searchbox.html',
+    ]
+}
 
 
 # -- Options for HTMLHelp output ---------------------------------------------
@@ -157,3 +182,8 @@ texinfo_documents = [
 # -- Extension configuration -------------------------------------------------
 
 autodoc_mock_imports = ['z2pack']
+
+# Example configuration for intersphinx: refer to the Python standard library.
+## Add Python version number to the default address to corretcly reference
+## the Python standard library
+intersphinx_mapping = {'https://docs.python.org/3.6': None}

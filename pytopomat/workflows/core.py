@@ -1,3 +1,8 @@
+"""
+Wflows using irvsp, vasp2trace, and Z2Pack.
+
+"""
+
 import numpy as np
 import itertools
 import os
@@ -25,9 +30,6 @@ from fireworks import Workflow
 from pytopomat.analyzer import StructureDimensionality
 from pytopomat.workflows.fireworks import Z2PackFW, InvariantFW
 
-"""
-This module provides workflows for running high-throughput calculations.
-"""
 
 __author__ = "Jason Munro, Nathan C. Frey"
 __copyright__ = "MIT License"
@@ -40,13 +42,13 @@ __date__ = "August 2019"
 
 def wf_irvsp(structure, c=None):
     """
-        Fireworks workflow for running an irvsp calculation.
+    Fireworks workflow for running an irvsp calculation.
 
-        Args:
-            structure (Structure): Pymatgen structure object
+    Args:
+        structure (Structure): Pymatgen structure object
 
-        Returns:
-            Workflow
+    Returns:
+        Workflow
     """
 
     c = c or {}
@@ -159,13 +161,13 @@ def wf_irvsp(structure, c=None):
 
 def wf_vasp2trace_nonmagnetic(structure, c=None):
     """
-        Fireworks workflow for running a vasp2trace calculation on a nonmagnetic material.
+    Fireworks workflow for running a vasp2trace calculation on a nonmagnetic material.
 
-        Args:
-            structure (Structure): Pymatgen structure object
+    Args:
+        structure (Structure): Pymatgen structure object
 
-        Returns:
-            Workflow
+    Returns:
+        Workflow
     """
 
     c = c or {}
@@ -278,13 +280,13 @@ def wf_vasp2trace_nonmagnetic(structure, c=None):
 
 def wf_vasp2trace_magnetic(structure, c=None):
     """
-        Fireworks workflow for running a vasp2trace calculation on a magnetic material.
+    Fireworks workflow for running a vasp2trace calculation on a magnetic material.
 
-        Args:
-            structure (Structure): Pymatgen structure object with magmom site property.
+    Args:
+        structure (Structure): Pymatgen structure object with magmom site property.
 
-        Returns:
-            Workflow
+    Returns:
+        Workflow
     """
 
     c = c or {}
@@ -415,16 +417,16 @@ class Z2PackWF:
         self, structure, symmetry_reduction=True, vasp_cmd=VASP_CMD, db_file=DB_FILE
     ):
         """
-      ***VASP_CMD in my_fworker.yaml MUST be set to "vasp_ncl" for Z2Pack.
+        Fireworks workflow for running Z2Pack to compute Z2 invariants and Chern numbers.
 
-      Fireworks workflow for running Z2Pack to compute Z2 invariants and Chern numbers.
+        ***VASP_CMD in my_fworker.yaml MUST be set to "vasp_ncl" for Z2Pack.
 
-      Args:
-          structure (Structure): Pymatgen structure object
-          symmetry_reduction (bool): Set to False to disable symmetry reduction and 
-          include all 6 BZ surfaces (for magnetic systems).
+        Args:
+            structure (Structure): Pymatgen structure object
+            symmetry_reduction (bool): Set to False to disable symmetry reduction and 
+            include all 6 BZ surfaces (for magnetic systems).
 
-      """
+        """
 
         self.structure = structure
         self.symmetry_reduction = symmetry_reduction
@@ -437,8 +439,8 @@ class Z2PackWF:
         Obtain the symmetry ops. in the reciprocal point group of an input structure.  
 
         Returns:
-          recip_point_group (list): List of symmetry operations as numpy arrays in the 
-          fractional reciprocal space basis. 
+            recip_point_group (list): List of symmetry operations as numpy arrays in the 
+            fractional reciprocal space basis. 
 
         """
         R = -1 * np.eye(3)
@@ -478,7 +480,7 @@ class Z2PackWF:
         Check for equivalency between two arrays including permutations. 
 
         Returns:
-          Whether the two arrays are equivalent (True) or not (False). 
+            Whether the two arrays are equivalent (True) or not (False). 
 
         """
         count = {}
@@ -501,7 +503,7 @@ class Z2PackWF:
         Get equivalent TRIM planes in the BZ using the reciprocal point symmetry.
 
         Returns:
-          plane_equiv (dict): Dictionary providing equivalent TRIM plane names. 
+            plane_equiv (dict): Dictionary providing equivalent TRIM plane names. 
 
         """
         struct = self.structure
@@ -541,7 +543,7 @@ class Z2PackWF:
         Get the workflow.
 
         Returns:
-          Workflow
+            Workflow
 
         """
 

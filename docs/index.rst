@@ -1,32 +1,13 @@
 Welcome to pytopomat's documentation!
 =====================================
 
-.. automodule:: pytopomat.z2pack_caller
-    :members:
-
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
-pytopomat
-=========
-
 Python Topological Materials (pytopomat) is a code for easy, high-throughput analysis of topological materials. 
 
 Features
 --------
 
 - Integration with vasp2trace, irvsp, and Z2Pack.
+- Workflows built with atomate and pymatgen.
 
 Contribute
 ----------
@@ -43,3 +24,18 @@ License
 -------
 
 The project is licensed under the MIT license.
+
+Contents
+--------
+
+.. toctree::
+   :maxdepth: 2
+
+   modules
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

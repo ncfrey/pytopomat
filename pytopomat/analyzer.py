@@ -1,3 +1,11 @@
+"""
+Compute topological invariants.
+
+This module offers a high level framework for analyzing topological materials in a 
+high-throughput context with VASP, Z2Pack, irvsp, and Vasp2Trace.
+
+"""
+
 import numpy as np
 
 import warnings
@@ -10,13 +18,6 @@ from pymatgen.analysis.dimensionality import (
     get_dimensionality_cheon,
     get_dimensionality_gorai,
 )
-
-
-"""
-This module offers a high level framework for analyzing topological materials in a 
-high-throughput context with VASP, Z2Pack, irvsp, and Vasp2Trace.
-
-"""
 
 __author__ = "Nathan C. Frey, Jason Munro"
 __copyright__ = "MIT License"
@@ -53,7 +54,7 @@ class BandParity(MSONable):
 
             spin_polarized (bool): Spin-polarized or not.
 
-        TODO:
+        Todo:
             * Try to find a gapped subspace of Bloch bands
             * Compute overall parity and Z2=(v0, v1v2v3)
             * Report spin-polarized parity filters
@@ -94,7 +95,8 @@ class BandParity(MSONable):
 
     @staticmethod
     def _get_parity_op(symm_ops):
-        """Find parity in the list of SymmOps.
+        """
+        Find parity in the list of SymmOps.
 
         Args:
             symm_ops (list): List of symmetry operations from v2t output.
@@ -129,8 +131,9 @@ class BandParity(MSONable):
 
     @staticmethod
     def get_trim_data(parity_op_index, v2t_output):
-        """Tabulate parity and identity eigenvals, as well as energies for all 
-            occupied bands over all TRIM points.
+        """
+        Tabulate parity and identity eigenvals, as well as energies for all 
+        occupied bands over all TRIM points.
 
         Args:
             parity_op_index (int): Index of parity op in list of SymmOps.
