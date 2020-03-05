@@ -19,6 +19,9 @@ from pymatgen.analysis.dimensionality import (
     get_dimensionality_gorai,
 )
 
+from pytopomat.vasp2trace_caller import Vasp2TraceOutput
+from pytopomat.irvsp_caller import IRVSPOutput
+
 __author__ = "Nathan C. Frey, Jason Munro"
 __copyright__ = "MIT License"
 __version__ = "0.0.1"
@@ -29,17 +32,21 @@ __date__ = "August 2019"
 
 
 class BandParity(MSONable):
-    def __init__(self, v2t_output=None, trim_data=None, spin_polarized=None):
+    def __init__(
+        self, calc_output=None, trim_data=None, spin_polarized=None, efermi=None
+    ):
         """
-        Determine parity of occupied bands at TRIM points with vasp2trace to calculate the Z2 topological invariant for centrosymmetric materials.
+        Determine parity of occupied bands at TRIM points with vasp2trace or irvsp output
+        to calculate the Z2 topological invariant for centrosymmetric materials.
 
-        Must give either v2t_output (non-spin-polarized) OR (up & down) for spin-polarized.
+        Must give either Vasp2TraceOutput (non-spin-polarized) OR (up & down) for spin-polarized,
+        or IRVSPOutput.
 
         Requires a VASP band structure run over the 8 TRIM points with:
         ICHARG=11; ISYM=2; LWAVE=.TRUE.
 
-        This module depends on the vasp2trace script available in the path.
-        Please download at http://www.cryst.ehu.es/cgi-bin/cryst/programs/topological.pl and consult the README.pdf for further help.
+        This module depends on the vasp2trace and irvsp script available in the path.
+        Please download at https://github.com/zjwang11/irvsp and consult the README.pdf for further help.
 
         If you use this module please cite:
         [1] Barry Bradlyn, L. Elcoro, Jennifer Cano, M. G. Vergniory, Zhijun Wang, C. Felser, M. I. Aroyo & B. Andrei Bernevig, Nature volume 547, pages 298–305 (20 July 2017).
@@ -47,12 +54,15 @@ class BandParity(MSONable):
         [2] M.G. Vergniory, L. Elcoro, C. Felser, N. Regnault, B.A. Bernevig, Z. Wang Nature (2019) 566, 480-485. doi:10.1038/s41586-019-0954-4.
 
         Args:
-            v2t_output (dict): Dict of {'up': Vasp2TraceOutput object} or {'up': v2to, 'down': v2to}.
+            calc_output (dict or IRVSPOutput): Dict of {'up': Vasp2TraceOutput object} or {'up': v2to, 'down': v2to},
+                                               or IRVSPOutput object.
 
             trim_data (dict): Maps TRIM point labels to band eigenvals and energies.
                               Contains dict of {"energies": List, "iden": List, "parity": List}
 
             spin_polarized (bool): Spin-polarized or not.
+
+            efermi (float): Fermi level. Only necessary if IRVSPOutput object is given.
 
         Todo:
             * Try to find a gapped subspace of Bloch bands
@@ -60,37 +70,68 @@ class BandParity(MSONable):
             * Report spin-polarized parity filters
         """
 
-        self.v2t_output = v2t_output
-        self.trim_data = trim_data
-        self.spin_polarized = spin_polarized
+        if type(calc_output) == dict:
 
-        # Check if spin-polarized or not
-        if "down" in v2t_output.keys():  # spin polarized
-            self.spin_polarized = True
+            self.calc_output = calc_output
+            self.trim_data = trim_data
+            self.spin_polarized = spin_polarized
+            self.efermi = efermi
+
+            # Check if spin-polarized or not
+            if "down" in self.calc_output.keys():  # spin polarized
+                if type(calc_output["down"]) != Vasp2TraceOutput:
+                    raise TypeError(
+                        "Calc output dictionary must contain Vasp2TraceOutput objects"
+                    )
+                self.spin_polarized = True
+            else:
+                if type(calc_output["up"]) != Vasp2TraceOutput:
+                    raise TypeError(
+                        "Calc output dictionary must contain Vasp2TraceOutput objects"
+                    )
+                self.spin_polarized = False
+
+            if self.spin_polarized:
+                self.trim_data = {}
+
+                # Up spin
+                parity_op_index_up = self._get_parity_op(
+                    self.calc_output["up"].symm_ops
+                )
+                self.trim_data["up"] = self.get_trim_data_v2t(
+                    parity_op_index_up, self.calc_output["up"]
+                )
+
+                # Down spin
+                parity_op_index_dn = self._get_parity_op(
+                    self.calc_output["down"].symm_ops
+                )
+                self.trim_data["down"] = self.get_trim_data_v2t(
+                    parity_op_index_dn, self.calc_output["down"]
+                )
+
+            else:
+                self.trim_data = {}
+
+                parity_op_index = self._get_parity_op(self.calc_output["up"].symm_ops)
+                self.trim_data["up"] = self.get_trim_data_v2t(
+                    parity_op_index, self.calc_output["up"]
+                )
+
+        elif type(calc_output) == IRVSPOutput:
+            self.calc_output = calc_output
+            self.trim_data = trim_data
+            self.spin_polarized = spin_polarized
+            self.efermi = efermi
+
+            if self.efermi is None:
+                raise RuntimeError("Fermi level required if IRVSPOutput object is given!")
+
+            self.trim_data = self.get_trim_data_irvsp(self.calc_output)
+
         else:
-            self.spin_polarized = False
-
-        if self.spin_polarized:
-            self.trim_data = {}
-
-            # Up spin
-            parity_op_index_up = self._get_parity_op(self.v2t_output["up"].symm_ops)
-            self.trim_data["up"] = self.get_trim_data(
-                parity_op_index_up, self.v2t_output["up"]
-            )
-
-            # Down spin
-            parity_op_index_dn = self._get_parity_op(self.v2t_output["down"].symm_ops)
-            self.trim_data["down"] = self.get_trim_data(
-                parity_op_index_dn, self.v2t_output["down"]
-            )
-
-        else:
-            self.trim_data = {}
-
-            parity_op_index = self._get_parity_op(self.v2t_output["up"].symm_ops)
-            self.trim_data["up"] = self.get_trim_data(
-                parity_op_index, self.v2t_output["up"]
+            raise TypeError(
+                "Calculation output data must be generated from Vasp2TraceOutput or IRVSPOutput."
             )
 
     @staticmethod
@@ -130,7 +171,87 @@ class BandParity(MSONable):
             return parity_op_index
 
     @staticmethod
-    def get_trim_data(parity_op_index, v2t_output):
+    def get_trim_data_irvsp(irvsp_output):
+        """
+        Tabulate parity and identity eigenvals, as well as energies for all 
+        occupied bands over all TRIM points.
+
+        Args:
+            irvsp_output (obj): IRVSPOutput object.
+
+        Returns:
+            trim_parities (dict): Maps TRIM label to band parities.
+
+        """
+
+        # Check dimension of material and define TRIMs accordingly
+        if len(irvsp_output.parity_eigenvals.keys()) == 8:  # 3D
+
+            # Define TRIM labels in units of primitive reciprocal vectors
+            trim_labels = ["gamma", "x", "y", "z", "s", "t", "u", "r"]
+            trim_pts = [
+                (0, 0, 0),
+                (0.5, 0, 0),
+                (0, 0.5, 0),
+                (0, 0, 0.5),
+                (0.5, 0.5, 0),
+                (0, 0.5, 0.5),
+                (0.5, 0, 0.5),
+                (0.5, 0.5, 0.5),
+            ]
+
+        elif len(irvsp_output.parity_eigenvals.keys()) == 4:  # 2D
+            trim_labels = ["gamma", "x", "y", "s"]
+            trim_pts = [(0, 0, 0), (0.5, 0, 0), (0, 0.5, 0), (0.5, 0.5, 0)]
+
+        trims = {
+            trim_pt: trim_label for trim_pt, trim_label in zip(trim_pts, trim_labels)
+        }
+
+        if irvsp_output.spin_polarized:
+            trim_data = {
+                spin: {
+                    trim_label: {"energies": [], "iden": [], "parity": []}
+                    for trim_label in trim_labels
+                }
+                for spin in ["up", "down"]
+            }
+        else:
+            trim_data = {
+                "up": {
+                    trim_label: {"energies": [], "iden": [], "parity": []}
+                    for trim_label in trim_labels
+                }
+            }
+
+        for trim_pt, trim_label in trims.items():
+            if not irvsp_output.spin_polarized:
+
+                irvsp_data = irvsp_output.parity_eigenvals[trim_label]
+
+                # Real part of parity eigenval
+                trim_data["up"][trim_label]["parity"] = irvsp_data["inversion_eigenval"]
+                trim_data["up"][trim_label]["iden"] = irvsp_data["band_degeneracy"]
+                trim_data["up"][trim_label]["energies"] = irvsp_data["band_eigenval"]
+
+            else:
+                irvsp_data = irvsp_output.parity_eigenvals[trim_label]
+
+                for spin in ["up", "down"]:
+                    trim_data[spin][trim_label]["parity"] = irvsp_data[spin][
+                        "inversion_eigenval"
+                    ]
+                    trim_data[spin][trim_label]["iden"] = irvsp_data[spin][
+                        "band_degeneracy"
+                    ]
+                    trim_data[spin][trim_label]["energies"] = irvsp_data[spin][
+                        "band_eigenval"
+                    ]
+
+        return trim_data
+
+    @staticmethod
+    def get_trim_data_v2t(parity_op_index, v2t_output):
         """
         Tabulate parity and identity eigenvals, as well as energies for all 
         occupied bands over all TRIM points.
@@ -255,13 +376,27 @@ class BandParity(MSONable):
     def _format_parity_data(self):
         """
         Format parity data to account for degeneracies.
+        For non-spin polarized calcs, each parity eigenvalue represents a single Kramer's pair. 
+        For spin-polarized calcs, each parity eigenvalue represents a single electron. 
 
         """
 
         spin_polarized = self.spin_polarized
 
         trim_labels = [key for key in self.trim_data["up"].keys()]
-        nele = self.v2t_output["up"].num_occ_bands
+
+        if type(self.calc_output) == IRVSPOutput:
+            nele = 0
+            gamma_energies = self.trim_data["up"]["gamma"]["energies"]
+            gamma_degeneracy = self.trim_data["up"]["gamma"]["iden"]
+
+            for index, degeneracy in enumerate(gamma_degeneracy):
+
+                if gamma_energies[index] - self.efermi <= 0.0:
+                    nele += degeneracy
+
+        else:
+            nele = self.calc_output["up"].num_occ_bands
 
         if not spin_polarized:
             spins = ["up"]
@@ -275,9 +410,9 @@ class BandParity(MSONable):
 
         for label in trim_labels:
             for spin in spins:
-                trim_parities_formatted[spin][label] = np.zeros(int(criteria))
-                trim_energies_formatted[spin][label] = np.zeros(int(criteria))
-                count = 0
+                trim_parities_formatted[spin][label] = np.ones(int(criteria))
+                trim_energies_formatted[spin][label] = np.ones(int(criteria))
+                count_ele = 0
 
                 if not spin_polarized:
                     if np.any(
@@ -315,67 +450,37 @@ class BandParity(MSONable):
                             % label
                         )
 
+                formatted_parity_eig = []
+                formatted_energy_eig = []
+
                 for i in range(len(self.trim_data[spin][label]["energies"])):
                     iden = int(self.trim_data[spin][label]["iden"][i])
                     parity = int(self.trim_data[spin][label]["parity"][i])
                     energy = self.trim_data[spin][label]["energies"][i]
 
-                    if iden == 2:
-                        if not spin_polarized:
-                            trim_parities_formatted[spin][label][count] = parity / abs(
-                                parity
-                            )
-                            trim_energies_formatted[spin][label][count] = energy
-                            count += 1
+                    if not spin_polarized:
+                        iden = int(iden/2)
+                        parity = parity/2
+
+
+                    temp_parity_eig = np.ones(iden)
+                    temp_energy_eig = energy*np.ones(iden)
+
+                    for j in range(0,iden):
+                        if np.sum(temp_parity_eig) == parity:
+                            break
                         else:
-                            for j in range(0, 2):
-                                if parity != 0:
-                                    trim_parities_formatted[spin][label][
-                                        count
-                                    ] = parity / abs(parity)
-                                    trim_energies_formatted[spin][label][count] = energy
+                            temp_parity_eig[j] = -1.0
 
-                                else:  # - Make zeros from two-fold degenerate states equal to -1
-                                    if j == 0:
-                                        trim_parities_formatted[spin][label][count] = -1
-                                        trim_energies_formatted[spin][label][
-                                            count
-                                        ] = energy
-                                    else:
-                                        trim_parities_formatted[spin][label][count] = 1
-                                        trim_energies_formatted[spin][label][
-                                            count
-                                        ] = energy
+                    formatted_parity_eig += list(temp_parity_eig)
+                    formatted_energy_eig += list(temp_energy_eig)
 
-                                count += 1
-                                if count == criteria:
-                                    break
+                    count_ele += iden
+                    if count_ele == criteria:
+                        break
 
-                    elif iden > 2:
-                        for j in range(int(abs(iden) / 2)):
-                            if abs(parity) > 1.0:
-                                trim_parities_formatted[spin][label][
-                                    count
-                                ] = parity / abs(parity)
-                                trim_energies_formatted[spin][label][count] = energy
-
-                            else:  # - Make zeros from four-fold degenerate states equal to -1
-                                if j == 0:
-                                    trim_parities_formatted[spin][label][count] = -1
-                                    trim_energies_formatted[spin][label][count] = energy
-                                else:
-                                    trim_parities_formatted[spin][label][count] = 1
-                                    trim_energies_formatted[spin][label][count] = energy
-
-                            count += 1
-                            if count == criteria:
-                                break
-
-                    elif iden == 1:
-                        trim_parities_formatted[spin][label][count] = parity
-                        trim_energies_formatted[spin][label][count] = energy
-
-                        count += 1
+                trim_parities_formatted[spin][label] = list(formatted_parity_eig)
+                trim_energies_formatted[spin][label] = list(formatted_energy_eig)
 
         return trim_parities_formatted, trim_energies_formatted
 
