@@ -10,7 +10,7 @@ import os
 from monty.json import MontyEncoder, jsanitize
 
 from pymatgen.core.structure import Structure
-from pymatgen.io.vasp import Incar
+from pymatgen.io.vasp import Incar, Outcar
 
 from pytopomat.irvsp_caller import IRVSPCaller, IRVSPOutput
 from pytopomat.vasp2trace_caller import Vasp2TraceCaller, Vasp2TraceOutput
@@ -42,9 +42,13 @@ class RunIRVSP(FiretaskBase):
             formula = raw_struct.composition.formula
             structure = raw_struct.as_dict()
 
+            outcar = Outcar(wd + "/OUTCAR")
+            efermi = outcar.efermi
+
         except:
             formula = None
             structure = None
+            efermi = None
 
         data = IRVSPOutput(wd + "/outir.txt")
 
@@ -53,6 +57,7 @@ class RunIRVSP(FiretaskBase):
                 "irvsp_out": data.as_dict(),
                 "structure": structure,
                 "formula": formula,
+                "efermi": efermi
             }
         )
 
@@ -77,6 +82,7 @@ class IRVSPToDb(FiretaskBase):
 
         d = {
             "formula": fw_spec["formula"],
+            "efermi": fw_spec["efermi"],
             "structure": fw_spec["structure"],
             "irvsp": irvsp,
         }
