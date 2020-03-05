@@ -40,12 +40,13 @@ __status__ = "Development"
 __date__ = "August 2019"
 
 
-def wf_irvsp(structure, c=None):
+def wf_irvsp(structure, magnetic=False, c=None):
     """
     Fireworks workflow for running an irvsp calculation.
 
     Args:
         structure (Structure): Pymatgen structure object
+        magnetic (bool): Whether the calculation is on a magnetic structure
 
     Returns:
         Workflow
@@ -58,6 +59,15 @@ def wf_irvsp(structure, c=None):
     ncoords = 3 * len(structure.sites)
 
     nbands = 0
+
+    if magnetic and "magmom" in structure.site_properties:
+        magmoms = structure.site_properties["magmom"]
+        magmoms = [str(m) for m in magmoms]
+        magmoms = " ".join(magmoms)
+    elif magnetic:
+        raise RuntimeError(
+            "Structure must have magnetic moments in site_properties for magnetic calcualtion!"
+        )
 
     for site in structure.sites:
         nbands += site.species.total_electrons
@@ -133,14 +143,23 @@ def wf_irvsp(structure, c=None):
         },
     )
 
+    if magnetic:
+        # Include magmoms in every calculation
+        wf = add_modify_incar(
+            wf,
+            modify_incar_params={
+                "incar_update": {"ISYM": 2, "MAGMOM": "%s" % magmoms, "ISPIN": 2}
+            },
+        )
+
     wf = add_modify_incar(
         wf,
         modify_incar_params={
             "incar_update": {
                 "ISYM": 2,
-                "LSORBIT": ".TRUE.",
-                "MAGMOM": "%i*0.0" % ncoords,
-                "ISPIN": 1,
+                "LSORBIT": ".FALSE." if magmoms else ".TRUE.",
+                "MAGMOM": "%s" % magmoms if magnetic else "%i*0.0" % ncoords,
+                "ISPIN": 2 if magnetic else 1,
                 "LWAVE": ".TRUE.",
                 "NBANDS": nbands,
             }
