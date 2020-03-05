@@ -125,7 +125,9 @@ class BandParity(MSONable):
             self.efermi = efermi
 
             if self.efermi is None:
-                raise RuntimeError("Fermi level required if IRVSPOutput object is given!")
+                raise RuntimeError(
+                    "Fermi level required if IRVSPOutput object is given!"
+                )
 
             self.trim_data = self.get_trim_data_irvsp(self.calc_output)
 
@@ -459,14 +461,13 @@ class BandParity(MSONable):
                     energy = self.trim_data[spin][label]["energies"][i]
 
                     if not spin_polarized:
-                        iden = int(iden/2)
-                        parity = parity/2
-
+                        iden = int(iden / 2)
+                        parity = parity / 2
 
                     temp_parity_eig = np.ones(iden)
-                    temp_energy_eig = energy*np.ones(iden)
+                    temp_energy_eig = energy * np.ones(iden)
 
-                    for j in range(0,iden):
+                    for j in range(0, iden):
                         if np.sum(temp_parity_eig) == parity:
                             break
                         else:
