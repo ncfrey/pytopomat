@@ -40,7 +40,7 @@ __status__ = "Development"
 __date__ = "August 2019"
 
 
-def wf_irvsp(structure, magnetic=False, c=None):
+def wf_irvsp(structure, magnetic=False, soc=False, c=None):
     """
     Fireworks workflow for running an irvsp calculation.
 
@@ -59,6 +59,7 @@ def wf_irvsp(structure, magnetic=False, c=None):
     ncoords = 3 * len(structure.sites)
 
     nbands = 0
+    magmoms = None
 
     if magnetic and "magmom" in structure.site_properties:
         magmoms = structure.site_properties["magmom"]
@@ -157,8 +158,8 @@ def wf_irvsp(structure, magnetic=False, c=None):
         modify_incar_params={
             "incar_update": {
                 "ISYM": 2,
-                "LSORBIT": ".FALSE." if magmoms else ".TRUE.",
-                "MAGMOM": "%s" % magmoms if magnetic else "%i*0.0" % ncoords,
+                "LSORBIT": ".TRUE." if soc else ".FALSE.",
+                "MAGMOM": "%s" % magmoms if magnetic and not soc else "%i*0.0" % ncoords,
                 "ISPIN": 2 if magnetic else 1,
                 "LWAVE": ".TRUE.",
                 "NBANDS": nbands,
