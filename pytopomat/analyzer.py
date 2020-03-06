@@ -373,7 +373,7 @@ class BandParity(MSONable):
             return ((Z2 - 1) / -2) + 0
 
         else:
-            raise RuntimeError("Incorrect number of k-points in vasp2trace output.")
+            raise RuntimeError("Incorrect number of k-points in data output.")
 
     def _format_parity_data(self):
         """
@@ -635,6 +635,40 @@ class BandParity(MSONable):
                     mag_screen["magnetoelectric"] = True
 
         return mag_screen
+
+    def compute_z4(self):
+        """
+        Compute Z4 topological index from TRIM band parities.
+
+        Returns:
+            Z4 (int): Z4 index 
+        """
+
+        trim_labels = [key for key in self.trim_data["up"].keys()]
+
+        trim_parities_set, trim_energies_set = self._format_parity_data()
+        trim_parities_up = trim_parities_set["up"]
+
+        if self.spin_polarized:
+            trim_parities_down = trim_parities_set["down"]
+
+        if len(trim_labels) == 8:
+            Z4 = 0
+
+            for label in trim_labels:
+                for parity_index in range(len(trim_parities_up[label])):
+                    if self.spin_polarized:
+                        Z4 += (
+                            1
+                            + trim_parities_up[label][parity_index]
+                            + trim_parities_down[label][parity_index]
+                        )
+                    else:
+                        Z4 += (1 + trim_parities_up[label][parity_index]) / 2
+
+            return Z4 % 4
+        else:
+            raise RuntimeError("Incorrect number of k-points in data output.")
 
 
 class StructureDimensionality(MSONable):
