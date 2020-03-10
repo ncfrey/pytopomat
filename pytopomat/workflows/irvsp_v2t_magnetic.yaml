@@ -1,0 +1,16 @@
+fireworks:
+- fw: atomate.vasp.fireworks.core.OptimizeFW
+- fw: atomate.vasp.fireworks.core.StaticFW
+  params:
+    parents: 0
+- fw: atomate.vasp.fireworks.core.NonSCFFW
+  params:
+    parents: 1
+    mode: line
+- fw: pytopomat.workflows.fireworks.IrvspFW
+  params:
+    parents: 2
+- fw: pytopomat.workflows.fireworks.Vasp2TraceMagneticFW
+  params:
+    parents: 2
+name: irvsp v2t magnetic
