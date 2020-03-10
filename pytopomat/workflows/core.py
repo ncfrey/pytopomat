@@ -40,14 +40,16 @@ __status__ = "Development"
 __date__ = "August 2019"
 
 
-def wf_irvsp(structure, magnetic=False, soc=False, c=None):
+def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
     """
     Fireworks workflow for running an irvsp calculation.
+    Optionally performs a vasp2trace calculation.
 
     Args:
         structure (Structure): Pymatgen structure object
         magnetic (bool): Whether the calculation is on a magnetic structure
         soc (bool): Spin-orbit coupling included
+        v2t (bool): Do a vasp2trace calculation in addition to irvsp.
 
     Returns:
         Workflow
@@ -97,150 +99,12 @@ def wf_irvsp(structure, magnetic=False, soc=False, c=None):
         tet_connections=None,
     )
 
-    wf = get_wf(
-        structure,
-        "irvsp.yaml",
-        params=[
-            {},
-            {},
-            {
-                "input_set_overrides": {
-                    "other_params": {"user_kpoints_settings": trim_kpoints}
-                }
-            },
-            {},
-        ],
-        vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
-        common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},
-    )
-
-    dim_data = StructureDimensionality(structure)
-
-    if np.any(
-        [
-            dim == 2
-            for dim in [dim_data.larsen_dim, dim_data.cheon_dim, dim_data.gorai_dim]
-        ]
-    ):
-        wf = add_modify_incar(
-            wf,
-            modify_incar_params={
-                "incar_update": {"IVDW": 11, "EDIFFG": 0.005, "IBRION": 2, "NSW": 100}
-            },
-            fw_name_constraint="structure optimization",
-        )
-    else:
-        wf = add_modify_incar(
-            wf,
-            modify_incar_params={
-                "incar_update": {"EDIFFG": 0.005, "IBRION": 2, "NSW": 100}
-            },
-            fw_name_constraint="structure optimization",
-        )
-
-    wf = add_modify_incar(
-        wf,
-        modify_incar_params={
-            "incar_update": {"ADDGRID": ".TRUE.", "LASPH": ".TRUE.", "GGA": "PS"}
-        },
-    )
-
-    if magnetic:
-        # Include magmoms in every calculation
-        wf = add_modify_incar(
-            wf,
-            modify_incar_params={
-                "incar_update": {"ISYM": 2, "MAGMOM": "%s" % magmoms, "ISPIN": 2}
-            },
-        )
-
-    wf = add_modify_incar(
-        wf,
-        modify_incar_params={
-            "incar_update": {
-                "ISYM": 2,
-                "LSORBIT": ".TRUE." if soc else ".FALSE.",
-                "MAGMOM": "%s" % magmoms if magnetic and not soc else "%i*0.0" % ncoords,
-                "ISPIN": 2 if magnetic else 1,
-                "LWAVE": ".TRUE.",
-                "NBANDS": nbands,
-            }
-        },
-        fw_name_constraint="nscf",
-    )
-
-    wf = add_common_powerups(wf, c)
-
-    if c.get("STABILITY_CHECK", STABILITY_CHECK):
-        wf = add_stability_check(wf, fw_name_constraint="structure optimization")
-
-    if c.get("ADD_WF_METADATA", ADD_WF_METADATA):
-        wf = add_wf_metadata(wf, structure)
-
-    return wf
-
-
-def wf_irvsp_v2t(structure, magnetic=False, soc=False, c=None):
-    """
-    Fireworks workflow for running irvsp and vasp2trace together.
-
-    Args:
-        structure (Structure): Pymatgen structure object
-        magnetic (bool): Whether the calculation is on a magnetic structure
-        soc (bool): Spin-orbit coupling included
-
-    Returns:
-        Workflow
-    """
-
-    c = c or {}
-    vasp_cmd = c.get("VASP_CMD", VASP_CMD)
-    db_file = c.get("DB_FILE", DB_FILE)
-
-    ncoords = 3 * len(structure.sites)
-
-    nbands = 0
-    magmoms = None
-
-    if magnetic and "magmom" in structure.site_properties:
-        magmoms = structure.site_properties["magmom"]
-        magmoms = [str(m) for m in magmoms]
-        magmoms = " ".join(magmoms)
-    elif magnetic:
-        raise RuntimeError(
-            "Structure must have magnetic moments in site_properties for magnetic calcualtion!"
-        )
-
-    for site in structure.sites:
-        nbands += site.species.total_electrons
-
-    trim_kpoints = Kpoints(
-        comment="TRIM Points",
-        num_kpts=8,
-        style=Kpoints.supported_modes.Reciprocal,
-        kpts=(
-            (0, 0, 0),
-            (0.5, 0, 0),
-            (0, 0.5, 0),
-            (0, 0, 0.5),
-            (0.5, 0.5, 0),
-            (0, 0.5, 0.5),
-            (0.5, 0, 0.5),
-            (0.5, 0.5, 0.5),
-        ),
-        kpts_shift=(0, 0, 0),
-        kpts_weights=[1, 1, 1, 1, 1, 1, 1, 1],
-        coord_type="Reciprocal",
-        labels=["gamma", "x", "y", "z", "s", "t", "u", "r"],
-        tet_number=0,
-        tet_weight=0,
-        tet_connections=None,
-    )
-
-    if magnetic:
+    if magnetic and v2t:
         yaml_spec = "irvsp_v2t_magnetic.yaml"
-    else:
+    elif v2t:
         yaml_spec = "irvsp_v2t.yaml"
+    else:
+        yaml_spec = "irvsp.yaml"
 
     wf = get_wf(
         structure,
