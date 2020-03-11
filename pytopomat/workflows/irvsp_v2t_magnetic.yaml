@@ -13,4 +13,3 @@ fireworks:
 - fw: pytopomat.workflows.fireworks.Vasp2TraceMagneticFW
   params:
     parents: 2
-name: irvsp v2t magnetic

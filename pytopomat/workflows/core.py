@@ -118,6 +118,7 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
                 }
             },
             {},
+            {},
         ],
         vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
         common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},
