@@ -83,7 +83,7 @@ class Vasp2TraceCaller:
 class Vasp2Trace2Caller:
     @requires(
         VASP2TRACE2EXE,
-        "Vasp2TraceCaller requires vasp2trace2 to be in the path."
+        "Vasp2Trace2Caller requires vasp2trace2 to be in the path."
         "Please install from https://github.com/zjwang11/irvsp",
     )
     def __init__(self, folder_name):

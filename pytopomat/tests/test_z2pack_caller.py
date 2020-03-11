@@ -8,14 +8,14 @@ import z2pack
 
 from pytopomat.z2pack_caller import Z2PackCaller, Z2Output
 
-test_dir = os.path.join(os.path.dirname(__file__), "../..", "test_files")
+test_dir = os.path.join(os.path.dirname(__file__), "../../test_files/")
 
 
 class TestZ2Pack(object):
     @pytest.fixture
     def z2out(self):
         """Returns Z2Output instance with Bi kx=0 surface data."""
-        result = z2pack.io.load("../test_files/res_1.json")
+        result = z2pack.io.load(test_dir +"res_1.json")
         out = Z2Output(result, "kx_0")
 
         return out

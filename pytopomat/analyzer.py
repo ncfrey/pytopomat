@@ -25,7 +25,7 @@ from pytopomat.irvsp_caller import IRVSPOutput
 __author__ = "Nathan C. Frey, Jason Munro"
 __copyright__ = "MIT License"
 __version__ = "0.0.1"
-__maintainer__ = "Nathan C. Frey, Jason, Munro"
+__maintainer__ = "Nathan C. Frey, Jason Munro"
 __email__ = "ncfrey@lbl.gov, jmunro@lbl.gov"
 __status__ = "Development"
 __date__ = "August 2019"
@@ -46,7 +46,7 @@ class BandParity(MSONable):
         ICHARG=11; ISYM=2; LWAVE=.TRUE.
 
         This module depends on the vasp2trace and irvsp script available in the path.
-        Please download at https://github.com/zjwang11/irvsp and consult the README.pdf for further help.
+        Please downloaqd at https://github.com/zjwang11/irvsp and consult the README.pdf for further help.
 
         If you use this module please cite:
         [1] Barry Bradlyn, L. Elcoro, Jennifer Cano, M. G. Vergniory, Zhijun Wang, C. Felser, M. I. Aroyo & B. Andrei Bernevig, Nature volume 547, pages 298–305 (20 July 2017).
