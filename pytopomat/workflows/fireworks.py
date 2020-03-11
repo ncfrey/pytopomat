@@ -20,6 +20,7 @@ from pytopomat.workflows.firetasks import (
     IRVSPToDb,
     Vasp2TraceToDb,
     RunVasp2Trace,
+    RunVasp2TraceMagnetic,
     Z2PackToDb,
     SetUpZ2Pack,
     RunZ2Pack,

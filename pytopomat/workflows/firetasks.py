@@ -13,7 +13,7 @@ from pymatgen.core.structure import Structure
 from pymatgen.io.vasp import Incar, Outcar
 
 from pytopomat.irvsp_caller import IRVSPCaller, IRVSPOutput
-from pytopomat.vasp2trace_caller import Vasp2TraceCaller, Vasp2TraceOutput
+from pytopomat.vasp2trace_caller import Vasp2TraceCaller, Vasp2Trace2Caller, Vasp2TraceOutput
 from pytopomat.z2pack_caller import Z2PackCaller
 
 from fireworks import explicit_serialize, FiretaskBase, FWAction
