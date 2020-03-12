@@ -107,6 +107,43 @@ class StandardizeCell(FiretaskBase):
 
 
 @explicit_serialize
+class IRVSPToDb(FiretaskBase):
+    """
+    Stores data from traces.txt that is output by vasp2trace.
+    optional_params:
+        db_file (str): path to the db file
+    """
+
+    required_params = ["irvsp_out"]
+    optional_params = ["db_file"]
+
+    def run_task(self, fw_spec):
+
+        irvsp = self["irvsp_out"] or fw_spec["irvsp_out"]
+
+        irvsp = jsanitize(irvsp)
+
+        d = {
+            "formula": fw_spec["formula"],
+            "efermi": fw_spec["efermi"],
+            "structure": fw_spec["structure"],
+            "irvsp": irvsp,
+        }
+
+        # store the results
+        db_file = env_chk(self.get("db_file"), fw_spec)
+        if not db_file:
+            with open("irvsp.json", "w") as f:
+                f.write(json.dumps(d, default=DATETIME_HANDLER))
+        else:
+            db = VaspCalcDb.from_db_file(db_file, admin=True)
+            db.collection = db.db["irvsp"]
+            db.collection.insert_one(d)
+            logger.info("IRVSP calculation complete.")
+        return FWAction()
+
+        
+@explicit_serialize
 class Vasp2TraceToDb(FiretaskBase):
     """
     Stores data from traces.txt that is output by vasp2trace.
