@@ -69,16 +69,13 @@ class StandardizeCell(FiretaskBase):
     """
     Standardize cell with spglib and symprec=1e-2.
 
-    optional_params:
-        db_file (str): path to the db file
     """
-
-    required_params = ["structure"]
-    optional_params = ["db_file"]
 
     def run_task(self, fw_spec):
 
-        struct = self["structure"] or fw_spec["structure"]
+        wd = os.getcwd()
+
+        struct = Structure.from_file(wd + "/POSCAR")
 
         numbers = [site.specie.number for site in struct]
         lattice = struct.lattice.matrix

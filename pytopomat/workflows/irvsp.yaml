@@ -1,6 +1,6 @@
 fireworks:
 - fw: atomate.vasp.fireworks.core.OptimizeFW
-- fw: atomate.vasp.fireworks.core.StandardizeFW
+- fw: pytopomat.workflows.fireworks.StandardizeFW
   params:
     parents: 0
 - fw: atomate.vasp.fireworks.core.StaticFW
