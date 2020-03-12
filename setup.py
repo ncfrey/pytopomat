@@ -22,7 +22,8 @@ setuptools.setup(
         "monty>=2.0.4",
         "atomate>=0.9.3",
         "custodian>=2019.8.24",
-        "FireWorks>=1.9.4"
+        "FireWorks>=1.9.4",
+        "spglib>=1.14.1"
     ],
     docs_extra = ['Sphinx >= 1.7.4'],
     include_package_data=True,

@@ -26,6 +26,7 @@ from pytopomat.workflows.firetasks import (
     RunZ2Pack,
     WriteWannier90Win,
     InvariantsToDB,
+    StandardizeCell,
 )
 
 
@@ -87,6 +88,61 @@ class IrvspFW(Firework):
         )
 
         super(IrvspFW, self).__init__(t, parents=parents, name=fw_name, **kwargs)
+
+
+class StandardizeFW(Firework):
+    def __init__(
+        self,
+        parents=None,
+        structure=None,
+        name="standardize",
+        db_file=None,
+        prev_calc_dir=None,
+        vasp_cmd=None,
+        **kwargs
+    ):
+        """
+        Standardize the structure with spglib.
+
+        Args:
+            structure (Structure): pmg structure.
+            name (str): name of this FW
+            db_file (str): path to the db file
+            parents (Firework): Parents of this particular Firework. FW or list of FWS.
+            prev_calc_dir (str): Path to a previous calculation to copy from
+            \*\*kwargs: Other kwargs that are passed to Firework.__init__.
+        """
+        fw_name = "{}-{}".format(
+            structure.composition.reduced_formula if structure else "unknown", name
+        )
+
+        t = []
+
+        if prev_calc_dir:
+            t.append(
+                CopyVaspOutputs(
+                    calc_dir=prev_calc_dir,
+                    contcar_to_poscar=True,
+                )
+            )
+        elif parents:
+            t.append(
+                CopyVaspOutputs(
+                    calc_loc=True,
+                    contcar_to_poscar=True,
+                )
+            )
+        else:
+            raise ValueError("Must specify structure or previous calculation")
+
+        t.extend(
+            [
+                StandardizeCell(),
+                PassCalcLocs(name=name),
+            ]
+        )
+
+        super(StandardizeFW, self).__init__(t, parents=parents, name=fw_name, **kwargs)
 
 
 class Vasp2TraceFW(Firework):

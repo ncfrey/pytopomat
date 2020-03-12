@@ -1,15 +1,18 @@
 fireworks:
 - fw: atomate.vasp.fireworks.core.OptimizeFW
-- fw: atomate.vasp.fireworks.core.StaticFW
+- fw: atomate.vasp.fireworks.core.StandardizeFW
   params:
     parents: 0
-- fw: atomate.vasp.fireworks.core.NonSCFFW
+- fw: atomate.vasp.fireworks.core.StaticFW
   params:
     parents: 1
+- fw: atomate.vasp.fireworks.core.NonSCFFW
+  params:
+    parents: 2
     mode: line
 - fw: pytopomat.workflows.fireworks.IrvspFW
   params:
-    parents: 2
+    parents: 3
 - fw: pytopomat.workflows.fireworks.Vasp2TraceFW
   params:
-    parents: 2
+    parents: 3

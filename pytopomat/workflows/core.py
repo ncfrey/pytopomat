@@ -9,6 +9,7 @@ import os
 
 from uuid import uuid4
 
+from pymatgen import Structure
 from pymatgen.io.vasp.inputs import Kpoints
 from pymatgen.io.vasp.sets import MPStaticSet
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
@@ -59,19 +60,20 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
     vasp_cmd = c.get("VASP_CMD", VASP_CMD)
     db_file = c.get("DB_FILE", DB_FILE)
 
-    ncoords = 3 * len(structure.sites)
-
-    nbands = 0
     magmoms = None
 
     if magnetic and "magmom" in structure.site_properties:
-        magmoms = structure.site_properties["magmom"]
-        magmoms = [str(m) for m in magmoms]
+        magmoms_orig = structure.site_properties["magmom"]
+        magmoms = [str(m) for m in magmoms_orig]
         magmoms = " ".join(magmoms)
     elif magnetic:
         raise RuntimeError(
             "Structure must have magnetic moments in site_properties for magnetic calcualtion!"
         )
+
+    ncoords = 3 * len(structure.sites)
+
+    nbands = 0
 
     for site in structure.sites:
         nbands += site.species.total_electrons
@@ -110,15 +112,16 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
         structure,
         yaml_spec,
         params=[
-            {},
-            {},
+            {},  # optimization
+            {},  # standardization
+            {},  # static
             {
                 "input_set_overrides": {
                     "other_params": {"user_kpoints_settings": trim_kpoints}
                 }
-            },
-            {},
-            {},
+            },  # nscf
+            {},  # irvsp
+            {},  # v2t
         ],
         vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
         common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},

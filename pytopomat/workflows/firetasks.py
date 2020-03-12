@@ -9,6 +9,8 @@ import os
 
 from monty.json import MontyEncoder, jsanitize
 
+from spglib import standardize_cell
+
 from pymatgen.core.structure import Structure
 from pymatgen.io.vasp import Incar, Outcar
 
@@ -63,41 +65,45 @@ class RunIRVSP(FiretaskBase):
 
 
 @explicit_serialize
-class IRVSPToDb(FiretaskBase):
+class StandardizeCell(FiretaskBase):
     """
-    Stores data from traces.txt that is output by vasp2trace.
+    Standardize cell with spglib and symprec=1e-2.
 
     optional_params:
         db_file (str): path to the db file
     """
 
-    required_params = ["irvsp_out"]
+    required_params = ["structure"]
     optional_params = ["db_file"]
 
     def run_task(self, fw_spec):
 
-        irvsp = self["irvsp_out"] or fw_spec["irvsp_out"]
+        struct = self["structure"] or fw_spec["structure"]
 
-        irvsp = jsanitize(irvsp)
+        numbers = [site.specie.number for site in struct]
+        lattice = struct.lattice.matrix
+        positions = struct.frac_coords
 
-        d = {
-            "formula": fw_spec["formula"],
-            "efermi": fw_spec["efermi"],
-            "structure": fw_spec["structure"],
-            "irvsp": irvsp,
-        }
-
-        # store the results
-        db_file = env_chk(self.get("db_file"), fw_spec)
-        if not db_file:
-            with open("irvsp.json", "w") as f:
-                f.write(json.dumps(d, default=DATETIME_HANDLER))
+        if "magmom" in struct.site_properties:
+            magmoms = struct.site_properties["magmom"]
+            cell = (lattice, positions, numbers, magmoms)
         else:
-            db = VaspCalcDb.from_db_file(db_file, admin=True)
-            db.collection = db.db["irvsp"]
-            db.collection.insert_one(d)
-            logger.info("IRVSP calculation complete.")
-        return FWAction()
+            magmoms = None
+            cell = (lattice, positions, numbers)
+
+        lat, pos, nums = standardize_cell(cell, to_primitive=False, 
+            symprec=1e-2)
+
+        structure = Structure(lat, nums, pos)
+
+        if magmoms is not None:
+            structure.add_site_property("magmom", magmoms)
+
+        return FWAction(
+            update_spec={
+                "structure": structure,
+            }
+        )
 
 
 @explicit_serialize
