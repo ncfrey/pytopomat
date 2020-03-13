@@ -96,6 +96,8 @@ class StandardizeCell(FiretaskBase):
         if magmoms is not None:
             structure.add_site_property("magmom", magmoms)
 
+        structure.to(fmt="poscar", filename="CONTCAR")
+
         return FWAction(
             update_spec={
                 "structure": structure,
@@ -106,7 +108,7 @@ class StandardizeCell(FiretaskBase):
 @explicit_serialize
 class IRVSPToDb(FiretaskBase):
     """
-    Stores data from traces.txt that is output by vasp2trace.
+    Stores data from outir.txt that is output by irvsp.
     optional_params:
         db_file (str): path to the db file
     """
