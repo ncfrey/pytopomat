@@ -176,7 +176,7 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
                 "MAGMOM": "%s" % magmoms if magnetic and not soc else "%i*0.0" % ncoords,
                 "ISPIN": 2 if magnetic else 1,
                 "LWAVE": ".TRUE.",
-                "NBANDS": nbands,
+                #"NBANDS": nbands,
             }
         },
         fw_name_constraint="nscf",
