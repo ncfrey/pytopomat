@@ -72,9 +72,11 @@ class IRVSPCaller:
         ssgs = loadfn(fpath)["ssgs"]
 
         # Remove SGOs from OUTCAR other than identity and inversion to avoid errors
-        if sgn not in ssgs:  # non-symmorphic
-            self.modify_outcar()
-            sgn = 2  # SG 2 (only E and I)
+
+        #if sgn not in ssgs:  # non-symmorphic; this doesn't work!
+            
+        self.modify_outcar()
+        sgn = 2  # SG 2 (only E and I)
 
         # Call irvsp
         cmd_list = ["irvsp", "-sg", str(sgn), "-v", str(v)]

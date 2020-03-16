@@ -101,28 +101,33 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
         tet_connections=None,
     )
 
+    # params dicts for wf
+    [
+    {},  # optimization
+    {},  # standardization
+    {},  # static
+    {
+        "input_set_overrides": {
+            "other_params": {"user_kpoints_settings": trim_kpoints}
+        }
+    },  # nscf
+    {},  # irvsp
+    ]
+
     if magnetic and v2t:
         yaml_spec = "irvsp_v2t_magnetic.yaml"
+        params.append({})
     elif v2t:
         yaml_spec = "irvsp_v2t.yaml"
+        params.append({})
     else:
         yaml_spec = "irvsp.yaml"
+
 
     wf = get_wf(
         structure,
         yaml_spec,
-        params=[
-            {},  # optimization
-            {},  # standardization
-            {},  # static
-            {
-                "input_set_overrides": {
-                    "other_params": {"user_kpoints_settings": trim_kpoints}
-                }
-            },  # nscf
-            {},  # irvsp
-            {},  # v2t
-        ],
+        params=params,
         vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
         common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},
     )
