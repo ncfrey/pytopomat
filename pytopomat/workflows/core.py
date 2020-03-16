@@ -102,16 +102,16 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
     )
 
     # params dicts for wf
-    [
-    {},  # optimization
-    {},  # standardization
-    {},  # static
-    {
-        "input_set_overrides": {
-            "other_params": {"user_kpoints_settings": trim_kpoints}
-        }
-    },  # nscf
-    {},  # irvsp
+    params = [
+        {},  # optimization
+        {},  # standardization
+        {},  # static
+        {
+            "input_set_overrides": {
+                "other_params": {"user_kpoints_settings": trim_kpoints}
+            }
+        },  # nscf
+        {},  # irvsp
     ]
 
     if magnetic and v2t:
@@ -122,7 +122,6 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
         params.append({})
     else:
         yaml_spec = "irvsp.yaml"
-
 
     wf = get_wf(
         structure,
@@ -178,10 +177,12 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
             "incar_update": {
                 "ISYM": 2,
                 "LSORBIT": ".TRUE." if soc else ".FALSE.",
-                "MAGMOM": "%s" % magmoms if magnetic and not soc else "%i*0.0" % ncoords,
+                "MAGMOM": "%s" % magmoms
+                if magnetic and not soc
+                else "%i*0.0" % ncoords,
                 "ISPIN": 2 if magnetic else 1,
                 "LWAVE": ".TRUE.",
-                #"NBANDS": nbands,
+                # "NBANDS": nbands,
             }
         },
         fw_name_constraint="nscf",
