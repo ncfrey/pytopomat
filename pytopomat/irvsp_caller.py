@@ -244,19 +244,15 @@ class IRVSPOutput(MSONable):
                         line_list = line_list.split("=", 1)[
                             0
                         ]  # delete irrep label at end of line
-                        line_list = [i for i in line_list.split(" ") if i]
+                        #line_list = [i for i in line_list.split(" ") if i]
 
                         # Check that trace line is complete, no ?? or errors
-                        if len(line_list) == num_ops + 1:  # symmops + band eigenval
-                            bnd = int(
-                                [i for i in line[:3].split(" ") if i][0]
-                            )  # band index
-                            ndg = int(line[5])  # band degeneracy
+                        if len(line_list) > 30:  # symmops + band eigenval
+                            bnd = int(line[:3].strip())  # band index
+                            ndg = int(line[3:6].strip())  # band degeneracy
+                            bnd_ev = float(line[6:16].strip())
+                            inv_ev = float(line[27:33].strip())
 
-                            evs = [i for i in line_list if i]
-                            bnd_ev = float(evs[0])
-                            inv_ev = evs[inv_num + 1]
-                            inv_ev = float(inv_ev[:4])  # delete imaginary part
                             bnds.append(bnd)
                             ndgs.append(ndg)
                             bnd_evs.append(bnd_ev)
