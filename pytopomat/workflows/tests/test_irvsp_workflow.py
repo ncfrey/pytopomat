@@ -1,13 +1,10 @@
 import warnings
 import os
 import pytest
-import unittest
-
-from monty.os.path import which
-from monty.serialization import dumpfn, loadfn
 
 from pymatgen import Structure, Lattice
 
+from fireworks import LaunchPad
 from atomate.utils.testing import AtomateTest, DB_DIR
 from atomate.vasp.database import VaspCalcDb
 
@@ -23,15 +20,15 @@ test_dir = os.path.join(module_dir, "..", "..", "..", "test_files")
 
 class TestIrvspWorkflow(object):
     @pytest.fixture
-    def connection(self):
+    def no_connection(self):
         """Check for connection to local MongoDB."""
 
         try:
             lp = LaunchPad.from_file(os.path.join(DB_DIR, "my_launchpad.yaml"))
             lp.reset("", require_password=False)
-            return True
-        except:
             return False
+        except:
+            return True
 
     @pytest.fixture
     def bi(self):
