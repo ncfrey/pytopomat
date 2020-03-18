@@ -1,6 +1,7 @@
 import warnings
 import os
 import pytest
+import unittest
 
 from monty.os.path import which
 from monty.serialization import dumpfn, loadfn
@@ -20,7 +21,18 @@ db_dir = os.path.join(module_dir, "..", "common", "test_files")
 test_dir = os.path.join(module_dir, "..", "..", "..", "test_files")
 
 
-class TestIrvspWorkflow(AtomateTest):
+class TestIrvspWorkflow(object):
+    @pytest.fixture
+    def connection(self):
+        """Check for connection to local MongoDB."""
+
+        try:
+            lp = LaunchPad.from_file(os.path.join(DB_DIR, "my_launchpad.yaml"))
+            lp.reset("", require_password=False)
+            return True
+        except:
+            return False
+
     @pytest.fixture
     def bi(self):
         """Return BCC Bi structure."""
@@ -43,6 +55,7 @@ class TestIrvspWorkflow(AtomateTest):
 
         assert fws[-2]["name"] == "Bi-irvsp"
 
+    @pytest.mark.xfail  # Will fail if no local MongoDB connection
     def test_insert(self, bi):
 
         formula = bi.composition.reduced_formula
@@ -57,7 +70,7 @@ class TestIrvspWorkflow(AtomateTest):
         db = VaspCalcDb.from_db_file(db_file)
         db.collection = db.db["irvsp"]
 
-        entry = db.collection.find({"formula": formula})
+        entry = db.collection.find_one({"formula": formula})
 
         assert entry["efermi"] == 3.0
 
