@@ -40,6 +40,7 @@ class TestIrvspWorkflow(object):
         bcc_bi = bcc_bi.get_reduced_structure("niggli")
         return bcc_bi
 
+    @pytest.mark.xfail  # Will fail without .yml specs in atomate library
     def test_get_wflow(self, bi):
 
         wf = wf_irvsp(bi, magnetic=False, soc=True, v2t=True)
