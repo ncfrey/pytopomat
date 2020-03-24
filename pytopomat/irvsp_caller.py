@@ -97,8 +97,9 @@ class IRVSPCaller:
     @staticmethod
     def modify_outcar(name="OUTCAR.bkp"):
         """
-        For a non-symmorphic material, delete all space group ops from OUTCAR except for identity (E)
-        and inversion (I). This allows the command "irvsp -sg 2 -v 1" to compute only I eigenvalues.
+        For a non-symmorphic material, delete all space group ops from OUTCAR
+        except for identity (E) and inversion (I). This allows the command
+        "irvsp -sg 2 -v 1" to compute only I eigenvalues.
 
         Must be run in a directory with OUTCAR.
 
@@ -106,9 +107,13 @@ class IRVSPCaller:
             name (str): Name for unmodified copy of OUTCAR.
         """
 
-        # Check for OUTCAR and WAVECAR
+        # Check for OUTCAR and CONTCAR
         if not path.isfile("OUTCAR"):
             raise FileNotFoundError()
+
+        write_inv = False
+        irot_start = 0
+        inv_op = "    2    -1.000000     0.000000     1.000000     0.000000     0.000000     0.000000     0.000000     0.000000"
 
         sgo_lines = []  # OUTCAR lines with superfluous SGOs
 
@@ -121,10 +126,17 @@ class IRVSPCaller:
                     if "INISYM" in line:
                         line_list = [i for i in line.strip().split(" ") if i]
                         num_ops = int(line_list[4])
+                        if num_ops == 1:  # Only translation
+                            write_inv = True
                     if "irot" in line:  # Start of SGOs
+                        irot_start = idx
                         sgo_lines = list(range(idx + 3, idx + num_ops + 1))
+                    if write_inv and idx == irot_start + 2:
+                        output.write(inv_op) 
+                        output.write("\n")
                     if idx not in sgo_lines:
                         output.write(line)
+
 
         os.rename("OUTCAR", name)
         os.rename("temp.txt", "OUTCAR")
