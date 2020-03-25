@@ -16,6 +16,8 @@ from monty.serialization import loadfn
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.core import Structure
 
+import numpy as np
+
 __author__ = "Nathan C. Frey, Jason Munro"
 __copyright__ = "MIT License"
 __version__ = "0.0.1"
@@ -266,6 +268,10 @@ class IRVSPOutput(MSONable):
                             ndg = int(line[3:6].strip())  # band degeneracy
                             bnd_ev = float(line[6:16].strip())
                             inv_ev = float(line[27:33].strip())
+                            
+                            if not np.isclose(inv_ev%1.0, 0.0, rtol=0, atol=0.03) or \
+                               not np.isclose(inv_ev%1.0, 1.0, rtol=0, atol=0.03):
+                               warnings.warn("IRVSP output data has non-integer parity eigenvalues!")
 
                             bnds.append(bnd)
                             ndgs.append(ndg)
