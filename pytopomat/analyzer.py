@@ -468,7 +468,7 @@ class BandParity(MSONable):
                     temp_energy_eig = energy * np.ones(iden)
 
                     for j in range(0, iden):
-                        if np.sum(temp_parity_eig) == parity:
+                        if np.isclose(np.sum(temp_parity_eig), parity, rtol=0, atol=0.03):
                             break
                         else:
                             temp_parity_eig[j] = -1.0
