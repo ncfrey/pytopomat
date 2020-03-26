@@ -54,6 +54,7 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
 
     Returns:
         Workflow
+
     """
 
     c = c or {}
@@ -162,7 +163,22 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
         },
     )
 
-    if magnetic:
+    # Includ ncl magmoms with saxis = (0, 0, 1)
+    if magnetic and soc:
+        magmoms = []
+        for m in magmoms_orig:
+            magmoms += [0.0, 0.0, m]
+        magmoms = [str(m) for m in magmoms]
+        magmoms = " ".join(magmoms)
+
+        wf = add_modify_incar(
+            wf,
+            modify_incar_params={
+                "incar_update": {"ISYM": 2, "MAGMOM": "%s" % magmoms}
+            },
+        )
+
+    if magnetic and not soc:
         # Include magmoms in every calculation
         wf = add_modify_incar(
             wf,
@@ -178,9 +194,9 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
                 "ISYM": 2,
                 "LSORBIT": ".TRUE." if soc else ".FALSE.",
                 "MAGMOM": "%s" % magmoms
-                if magnetic and not soc
+                if magnetic
                 else "%i*0.0" % ncoords,
-                "ISPIN": 2 if magnetic else 1,
+                "ISPIN": 2 if magnetic and not soc else 1,
                 "LWAVE": ".TRUE.",
                 # "NBANDS": nbands,
             }
@@ -320,13 +336,16 @@ def wf_vasp2trace_nonmagnetic(structure, c=None):
 
 def wf_vasp2trace_magnetic(structure, c=None):
     """
-    Fireworks workflow for running a vasp2trace calculation on a magnetic material.
+    Fireworks workflow for running a vasp2trace calculation 
+    on a magnetic material.
 
     Args:
-        structure (Structure): Pymatgen structure object with magmom site property.
+        structure (Structure): Pymatgen structure object with 
+            magmom site property.
 
     Returns:
         Workflow
+
     """
 
     c = c or {}
