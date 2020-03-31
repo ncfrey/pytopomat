@@ -33,41 +33,50 @@ __date__ = "August 2019"
 
 class BandParity(MSONable):
     def __init__(
-        self, calc_output=None, trim_data=None, spin_polarized=None, efermi=None
+        self, calc_output=None, trim_data=None, spin_polarized=None, efermi=None, eigenval_tol=0.03
     ):
         """
-        Determine parity of occupied bands at TRIM points with vasp2trace or irvsp output
-        to calculate the Z2 topological invariant for centrosymmetric materials.
+        Determine parity of occupied bands at TRIM points with vasp2trace or
+        irvsp output to calculate the Z2 topological invariant for
+        centrosymmetric materials.
 
-        Must give either Vasp2TraceOutput (non-spin-polarized) OR (up & down) for spin-polarized,
-        or IRVSPOutput.
+        Must give either Vasp2TraceOutput (non-spin-polarized) OR (up & down)
+        for spin-polarized, or IRVSPOutput.
 
         Requires a VASP band structure run over the 8 TRIM points with:
         ICHARG=11; ISYM=2; LWAVE=.TRUE.
 
-        This module depends on the vasp2trace and irvsp script available in the path.
-        Please download at https://github.com/zjwang11/irvsp and consult the README.pdf for further help.
+        This module depends on the vasp2trace and irvsp script available in
+        the path.
+        Please download at https://github.com/zjwang11/irvsp and consult the
+        README.pdf for further help.
 
         If you use this module please cite:
-        [1] Barry Bradlyn, L. Elcoro, Jennifer Cano, M. G. Vergniory, Zhijun Wang, C. Felser, M. I. Aroyo & B. Andrei Bernevig, Nature volume 547, pages 298–305 (20 July 2017).
+        [1] Barry Bradlyn, L. Elcoro, Jennifer Cano, M. G. Vergniory, Zhijun
+        Wang, C. Felser, M. I. Aroyo & B. Andrei Bernevig, Nature volume 547,
+        pages 298–305 (20 July 2017).
 
-        [2] M.G. Vergniory, L. Elcoro, C. Felser, N. Regnault, B.A. Bernevig, Z. Wang Nature (2019) 566, 480-485. doi:10.1038/s41586-019-0954-4.
+        [2] M.G. Vergniory, L. Elcoro, C. Felser, N. Regnault, B.A. Bernevig,
+        Z. Wang Nature (2019) 566, 480-485. doi:10.1038/s41586-019-0954-4.
 
         Args:
-            calc_output (dict or IRVSPOutput): Dict of {'up': Vasp2TraceOutput object} or {'up': v2to, 'down': v2to},
-                                               or IRVSPOutput object.
-
-            trim_data (dict): Maps TRIM point labels to band eigenvals and energies.
-                              Contains dict of {"energies": List, "iden": List, "parity": List}
-
+            calc_output (dict or IRVSPOutput): Dict of {'up':
+                Vasp2TraceOutput object} or {'up': v2to, 'down': v2to},
+                or IRVSPOutput object.
+            trim_data (dict): Maps TRIM point labels to band eigenvals and
+                energies. Contains dict of {"energies": List, "iden": List,
+                "parity": List}
             spin_polarized (bool): Spin-polarized or not.
-
-            efermi (float): Fermi level. Only necessary if IRVSPOutput object is given.
+            efermi (float): Fermi level. Only necessary if IRVSPOutput object
+                is given.
+            eigenval_tol (float): Tolerance (eV) on rounding for fractional
+                parity eigenvalues.
 
         Todo:
             * Try to find a gapped subspace of Bloch bands
             * Compute overall parity and Z2=(v0, v1v2v3)
             * Report spin-polarized parity filters
+
         """
 
         if type(calc_output) == dict:
@@ -76,6 +85,7 @@ class BandParity(MSONable):
             self.trim_data = trim_data
             self.spin_polarized = spin_polarized
             self.efermi = efermi
+            self.eigenval_tol = eigenval_tol
 
             # Check if spin-polarized or not
             if "down" in self.calc_output.keys():  # spin polarized
@@ -123,6 +133,7 @@ class BandParity(MSONable):
             self.trim_data = trim_data
             self.spin_polarized = spin_polarized
             self.efermi = efermi
+            self.eigenval_tol = eigenval_tol
 
             if self.efermi is None:
                 raise RuntimeError(
@@ -378,12 +389,15 @@ class BandParity(MSONable):
     def _format_parity_data(self):
         """
         Format parity data to account for degeneracies.
-        For non-spin polarized calcs, each parity eigenvalue represents a single Kramer's pair. 
-        For spin-polarized calcs, each parity eigenvalue represents a single electron. 
+        For non-spin polarized calcs, each parity eigenvalue represents a
+        single Kramer's pair. 
+        For spin-polarized calcs, each parity eigenvalue represents a single
+        electron. 
 
         """
 
         spin_polarized = self.spin_polarized
+        eigenval_tol = self.eigenval_tol
 
         trim_labels = [key for key in self.trim_data["up"].keys()]
 
@@ -468,7 +482,7 @@ class BandParity(MSONable):
                     temp_energy_eig = energy * np.ones(iden)
 
                     for j in range(0, iden):
-                        if np.isclose(np.sum(temp_parity_eig), parity, rtol=0, atol=0.03):
+                        if np.isclose(np.sum(temp_parity_eig), parity, rtol=0, atol=eigenval_tol):
                             break
                         else:
                             temp_parity_eig[j] = -1.0
