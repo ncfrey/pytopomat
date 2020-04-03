@@ -429,14 +429,13 @@ class BandParity(MSONable):
                 trim_parities_formatted[spin][label] = np.ones(int(criteria))
                 trim_energies_formatted[spin][label] = np.ones(int(criteria))
                 count_ele = 0
-                nocc = 0  # number of lines of occupied bands
-                for e in self.trim_data[spin][label]["energies"]:
-                    if type(self.calc_output) == IRVSPOutput: 
-                        if e - self.efermi <= 0.0:
-                            nocc += 1 
-                    else:
-                        if e <= 0.0:
-                            nocc += 1
+
+                if type(self.calc_output) == IRVSPOutput:
+                    efermi = self.efermi
+                else:
+                    efermi = 0
+                # number of lines of occupied bands
+                nocc = len([e for e in self.trim_data[spin][label]["energies"] if e < efermi])
 
                 if not spin_polarized:
                     if np.any(
