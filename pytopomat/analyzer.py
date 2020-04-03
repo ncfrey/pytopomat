@@ -429,20 +429,28 @@ class BandParity(MSONable):
                 trim_parities_formatted[spin][label] = np.ones(int(criteria))
                 trim_energies_formatted[spin][label] = np.ones(int(criteria))
                 count_ele = 0
+                nocc = 0  # number of lines of occupied bands
+                for e in self.trim_data[spin][label]["energies"]:
+                    if type(self.calc_output) == IRVSPOutput: 
+                        if e - self.efermi <= 0.0:
+                            nocc += 1 
+                    else:
+                        if e <= 0.0:
+                            nocc += 1
 
                 if not spin_polarized:
                     if np.any(
-                        [int(i) == 1 for i in self.trim_data[spin][label]["iden"][:]]
+                        [int(i) == 1 for i in self.trim_data[spin][label]["iden"][:nocc]]
                     ):
                         raise RuntimeError(
                             "Non-spin polarized selected, but trace data does not show doubly degenerate bands at %s."
                             % label
                         )
 
-                    iden_sum = int(np.sum(self.trim_data[spin][label]["iden"][:]))
+                    iden_sum = int(np.sum(self.trim_data[spin][label]["iden"][:nocc]))
                     if (
                         nele < iden_sum
-                        and int(self.trim_data["up"][label]["parity"][-1]) == 0
+                        and int(self.trim_data["up"][label]["parity"][nocc-1]) == 0
                     ):
                         raise RuntimeError(
                             "Cannot tell the parity of the highest occupied state at %s."
@@ -450,16 +458,16 @@ class BandParity(MSONable):
                         )
                 else:
                     if np.all(
-                        [int(i) != 1.0 for i in self.trim_data[spin][label]["iden"][:]]
+                        [int(i) != 1.0 for i in self.trim_data[spin][label]["iden"][:nocc]]
                     ):
                         warnings.warn(
                             "Spin polarized selected, but at least one TRIM point shows all doubly degenerate bands."
                         )
 
-                    iden_sum = int(np.sum(self.trim_data[spin][label]["iden"][:]))
+                    iden_sum = int(np.sum(self.trim_data[spin][label]["iden"][:nocc]))
                     if (
                         nele < iden_sum
-                        and int(self.trim_data[spin][label]["parity"][-1]) > 1
+                        and int(self.trim_data[spin][label]["parity"][nocc-1]) > 1
                     ):
                         raise RuntimeError(
                             "Cannot tell the parity of the highest occupied state at %s."
