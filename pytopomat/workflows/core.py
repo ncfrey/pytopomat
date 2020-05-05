@@ -11,7 +11,7 @@ from uuid import uuid4
 
 from pymatgen import Structure
 from pymatgen.io.vasp.inputs import Kpoints
-from pymatgen.io.vasp.sets import MPStaticSet
+from pymatgen.io.vasp.sets import MPStaticSet, MPRelaxSet
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 from atomate.vasp.config import STABILITY_CHECK, VASP_CMD, DB_FILE, ADD_WF_METADATA
@@ -612,7 +612,7 @@ class Z2PackWF:
 
         nsites = len(self.structure.sites)
 
-        vis = MPStaticSet(self.structure, potcar_functional="PBE_54", force_gamma=True)
+        vis = MPRelaxSet(self.structure, potcar_functional="PBE_54", force_gamma=True)
 
         opt_fw = OptimizeFW(
             self.structure,
@@ -620,6 +620,8 @@ class Z2PackWF:
             vasp_cmd=c["VASP_CMD"],
             db_file=c["DB_FILE"],
         )
+
+        vis = MPStaticSet(self.structure, potcar_functional="PBE_54", force_gamma=True)
 
         static_fw = StaticFW(
             self.structure,
@@ -644,8 +646,8 @@ class Z2PackWF:
                         mark = False
                 if mark and add_surface not in surfaces:
                     surfaces.append(add_surface)
-        else:
-            surfaces = ["kx_0", "kx_1", "ky_0", "ky_1", "kz_0", "kz_1"]
+        else:  # 4 TRI surfaces define Z2 in 3D
+            surfaces = ["kx_1", "ky_1", "kz_0", "kz_1"]
 
         z2pack_fws = []
 

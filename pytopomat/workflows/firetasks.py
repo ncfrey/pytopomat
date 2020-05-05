@@ -439,12 +439,12 @@ class WriteWannier90Win(FiretaskBase):
 @explicit_serialize
 class InvariantsToDB(FiretaskBase):
     """
-    Store Z2 and Chern nums on all 6 TRIM surfaces from Z2P output.
+    Store Z2 and Chern nums on TRIM surfaces from Z2P output.
 
     required_params:
         wf_uuid (str): Unique wf identifier.
-        symmetry_reduction (bool): Set to False to disable symmetry reduction and 
-        include all 6 BZ surfaces (for magnetic systems).
+        symmetry_reduction (bool): Set to False to disable symmetry reduction
+            and include all 6 BZ surfaces (for magnetic systems).
         equiv_planes (dict): of the form {kx_0': ['ky_0', 'kz_0']}.
 
     """
@@ -494,6 +494,16 @@ class InvariantsToDB(FiretaskBase):
                         if ep not in chern_dict.keys():
                             chern_dict[ep] = chern_dict[surface]
 
+        # Compute Z2 invariant
+        if all(surface in z2_dict.keys() for surface in ["kx_1", "ky_1", "kz_0", "kz_1"]):
+            v0 = (z2_dict["kz_0"] + z2_dict["kz_1"]) % 2
+            v1 = z2_dict["kx_1"]
+            v2 = z2_dict["ky_1"]
+            v3 = z2_dict["kz_1"]
+            z2 = (v0, v1, v2, v3)
+        else:
+            z2 = (np.nan, np.nan, np.nan, np.nan)
+
         # store the results
         d = {
             "wf_uuid": uuid,
@@ -503,6 +513,7 @@ class InvariantsToDB(FiretaskBase):
             "structure": structure.as_dict(),
             "z2_dict": z2_dict,
             "chern_dict": chern_dict,
+            "z2": z2,
             "equiv_planes": equiv_planes,
             "symmetry_reduction": symmetry_reduction,
         }
