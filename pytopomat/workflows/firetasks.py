@@ -6,6 +6,7 @@ Firetasks for FWs.
 import shutil
 import json
 import os
+import numpy as np
 
 from monty.json import MontyEncoder, jsanitize
 
@@ -15,7 +16,11 @@ from pymatgen.core.structure import Structure
 from pymatgen.io.vasp import Incar, Outcar
 
 from pytopomat.irvsp_caller import IRVSPCaller, IRVSPOutput
-from pytopomat.vasp2trace_caller import Vasp2TraceCaller, Vasp2Trace2Caller, Vasp2TraceOutput
+from pytopomat.vasp2trace_caller import (
+    Vasp2TraceCaller,
+    Vasp2Trace2Caller,
+    Vasp2TraceOutput,
+)
 from pytopomat.z2pack_caller import Z2PackCaller
 
 from fireworks import explicit_serialize, FiretaskBase, FWAction
@@ -59,7 +64,7 @@ class RunIRVSP(FiretaskBase):
                 "irvsp_out": data.as_dict(),
                 "structure": structure,
                 "formula": formula,
-                "efermi": efermi
+                "efermi": efermi,
             }
         )
 
@@ -88,8 +93,7 @@ class StandardizeCell(FiretaskBase):
             magmoms = None
             cell = (lattice, positions, numbers)
 
-        lat, pos, nums = standardize_cell(cell, to_primitive=False, 
-            symprec=1e-2)
+        lat, pos, nums = standardize_cell(cell, to_primitive=False, symprec=1e-2)
 
         structure = Structure(lat, nums, pos)
 
@@ -98,11 +102,7 @@ class StandardizeCell(FiretaskBase):
 
         structure.to(fmt="poscar", filename="CONTCAR")
 
-        return FWAction(
-            update_spec={
-                "structure": structure,
-            }
-        )
+        return FWAction(update_spec={"structure": structure})
 
 
 @explicit_serialize
@@ -141,7 +141,7 @@ class IRVSPToDb(FiretaskBase):
             logger.info("IRVSP calculation complete.")
         return FWAction()
 
-        
+
 @explicit_serialize
 class Vasp2TraceToDb(FiretaskBase):
     """
@@ -495,7 +495,9 @@ class InvariantsToDB(FiretaskBase):
                             chern_dict[ep] = chern_dict[surface]
 
         # Compute Z2 invariant
-        if all(surface in z2_dict.keys() for surface in ["kx_1", "ky_1", "kz_0", "kz_1"]):
+        if all(
+            surface in z2_dict.keys() for surface in ["kx_1", "ky_1", "kz_0", "kz_1"]
+        ):
             v0 = (z2_dict["kz_0"] + z2_dict["kz_1"]) % 2
             v1 = z2_dict["kx_1"]
             v2 = z2_dict["ky_1"]
