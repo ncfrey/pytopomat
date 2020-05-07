@@ -207,7 +207,7 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
     wf = add_common_powerups(wf, c)
 
     uuid = str(uuid4())
-    wf_meta = {"wf_uuid": self.uuid, "wf_name": "IRVSP WF"}
+    wf_meta = {"wf_uuid": uuid, "wf_name": "IRVSP WF"}
     wf = add_additional_fields_to_taskdocs(wf, {"wf_meta": wf_meta},
         task_name_constraint="VaspToDb")
     wf = add_additional_fields_to_taskdocs(wf, {"wf_meta": wf_meta},
