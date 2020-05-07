@@ -109,12 +109,18 @@ class StandardizeCell(FiretaskBase):
 class IRVSPToDb(FiretaskBase):
     """
     Stores data from outir.txt that is output by irvsp.
+
+    required_params:
+        irvsp_out (IRVSPOutput): output from IRVSP calculation.
+
     optional_params:
         db_file (str): path to the db file
+        additional_fields (dict): dict of additional fields to add
+        
     """
 
     required_params = ["irvsp_out"]
-    optional_params = ["db_file"]
+    optional_params = ["db_file", "additional_fields"]
 
     def run_task(self, fw_spec):
 
@@ -122,12 +128,12 @@ class IRVSPToDb(FiretaskBase):
 
         irvsp = jsanitize(irvsp)
 
-        d = {
-            "formula": fw_spec["formula"],
-            "efermi": fw_spec["efermi"],
-            "structure": fw_spec["structure"],
-            "irvsp": irvsp,
-        }
+        additional_fields = self.get("additional_fields", {})
+        d = additional_fields.copy()
+        d["formula"] = fw_spec["formula"]
+        d["efermi"] = fw_spec["efermi"]
+        d["structure"] = fw_spec["structure"]
+        d["irvsp"] = irvsp
 
         # store the results
         db_file = env_chk(self.get("db_file"), fw_spec)
