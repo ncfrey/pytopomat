@@ -112,6 +112,7 @@ class IRVSPToDb(FiretaskBase):
 
     required_params:
         irvsp_out (IRVSPOutput): output from IRVSP calculation.
+        wf_uuid (str): unique wf id
 
     optional_params:
         db_file (str): path to the db file
@@ -119,7 +120,7 @@ class IRVSPToDb(FiretaskBase):
         
     """
 
-    required_params = ["irvsp_out"]
+    required_params = ["irvsp_out", "wf_uuid"]
     optional_params = ["db_file", "additional_fields"]
 
     def run_task(self, fw_spec):
@@ -130,6 +131,7 @@ class IRVSPToDb(FiretaskBase):
 
         additional_fields = self.get("additional_fields", {})
         d = additional_fields.copy()
+        d["wf_uuid"] = self["wf_uuid"]
         d["formula"] = fw_spec["formula"]
         d["efermi"] = fw_spec["efermi"]
         d["structure"] = fw_spec["structure"]

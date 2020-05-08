@@ -36,6 +36,7 @@ class IrvspFW(Firework):
         parents=None,
         structure=None,
         name="irvsp",
+        wf_uuid=None,
         db_file=None,
         prev_calc_dir=None,
         irvsp_out=None,
@@ -49,11 +50,14 @@ class IrvspFW(Firework):
         Args:
             structure (Structure): - only used for setting name of FW
             name (str): name of this FW
+            wf_uuid (str): unique wf id
             db_file (str): path to the db file
             parents (Firework): Parents of this particular Firework. FW or list of FWS.
             prev_calc_dir (str): Path to a previous calculation to copy from
             \*\*kwargs: Other kwargs that are passed to Firework.__init__.
+
         """
+
         fw_name = "{}-{}".format(
             structure.composition.reduced_formula if structure else "unknown", name
         )
@@ -83,7 +87,8 @@ class IrvspFW(Firework):
             [
                 RunIRVSP(),
                 PassCalcLocs(name=name),
-                IRVSPToDb(db_file=db_file, irvsp_out=irvsp_out),
+                IRVSPToDb(db_file=db_file, wf_uuid=wf_uuid,
+                    irvsp_out=irvsp_out),
             ]
         )
 

@@ -61,6 +61,9 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
     vasp_cmd = c.get("VASP_CMD", VASP_CMD)
     db_file = c.get("DB_FILE", DB_FILE)
 
+    uuid = str(uuid4())
+    wf_meta = {"wf_uuid": uuid, "wf_name": "Irvsp WF"}
+
     magmoms = None
 
     if magnetic and "magmom" in structure.site_properties:
@@ -112,7 +115,7 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
                 "other_params": {"user_kpoints_settings": trim_kpoints}
             }
         },  # nscf
-        {},  # irvsp
+        {"wf_uuid": uuid},  # irvsp
     ]
 
     if magnetic and v2t:
@@ -130,6 +133,7 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
         params=params,
         vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
         common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},
+        wf_metadata=wf_meta,
     )
 
     dim_data = StructureDimensionality(structure)
@@ -206,12 +210,8 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
 
     wf = add_common_powerups(wf, c)
 
-    uuid = str(uuid4())
-    wf_meta = {"wf_uuid": uuid, "wf_name": "IRVSP WF"}
     wf = add_additional_fields_to_taskdocs(wf, {"wf_meta": wf_meta},
         task_name_constraint="VaspToDb")
-    wf = add_additional_fields_to_taskdocs(wf, {"wf_meta": wf_meta},
-        task_name_constraint="IRVSPToDb")
 
     if c.get("STABILITY_CHECK", STABILITY_CHECK):
         wf = add_stability_check(wf, fw_name_constraint="structure optimization")
