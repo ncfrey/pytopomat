@@ -557,34 +557,6 @@ class BandParity(MSONable):
 
             return nbands - mark
 
-    def screen_semimetal(self):
-        """
-        Parity criteria screening for metallic band structures to predict if nonmagnetic Weyl semimetal phase is allowed.
-
-        Returns:
-            semimetal (int): -1 (system MIGHT be a semimetal) or 1 (not a semimetal).
-
-        """
-
-        trim_parities, trim_energies = self._format_parity_data()
-
-        # Count total number of odd parity states over all TRIMs
-        num_odd_states = 0
-
-        for trim_label, parities in trim_parities["up"].items():
-            num_odd_at_trim = np.sum(
-                np.fromiter((1 for i in parities if i < 0), dtype=int)
-            )
-
-            num_odd_states += num_odd_at_trim
-
-        if num_odd_states % 2 == 1:
-            semimetal = -1
-        else:
-            semimetal = 1
-
-        return semimetal
-
     def screen_magnetic_parity(self):
         """
         Screen candidate inversion-symmetric magnetic topological materials from band parity criteria.
