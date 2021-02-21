@@ -12,7 +12,7 @@ import warnings
 
 from monty.json import MSONable
 
-from pymatgen.analysis.local_env import MinimumDistanceNN
+from pymatgen.analysis.local_env import CrystalNN
 from pymatgen.analysis.dimensionality import (
     get_dimensionality_larsen,
     get_dimensionality_cheon,
@@ -710,8 +710,8 @@ class StructureDimensionality(MSONable):
         self.cheon_dim = cheon_dim
         self.gorai_dim = gorai_dim
 
-        # Default to MinimumDistanceNN for generating structure graph.
-        sgraph = MinimumDistanceNN().get_bonded_structure(structure)
+        # Default to CrystalNN for generating structure graph.
+        sgraph = CrystalNN().get_bonded_structure(structure)
 
         self.structure_graph = sgraph
 
