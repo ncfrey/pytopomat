@@ -33,7 +33,12 @@ __date__ = "August 2019"
 
 class BandParity(MSONable):
     def __init__(
-        self, calc_output=None, trim_data=None, spin_polarized=None, efermi=None, eigenval_tol=0.03
+        self,
+        calc_output=None,
+        trim_data=None,
+        spin_polarized=None,
+        efermi=None,
+        eigenval_tol=0.03,
     ):
         """
         Determine parity of occupied bands at TRIM points with vasp2trace or
@@ -435,11 +440,16 @@ class BandParity(MSONable):
                 else:
                     efermi = 0
                 # number of lines of occupied bands
-                nocc = len([e for e in self.trim_data[spin][label]["energies"] if e < efermi])
+                nocc = len(
+                    [e for e in self.trim_data[spin][label]["energies"] if e < efermi]
+                )
 
                 if not spin_polarized:
                     if np.any(
-                        [int(i) == 1 for i in self.trim_data[spin][label]["iden"][:nocc]]
+                        [
+                            int(i) == 1
+                            for i in self.trim_data[spin][label]["iden"][:nocc]
+                        ]
                     ):
                         raise RuntimeError(
                             "Non-spin polarized selected, but trace data does not show doubly degenerate bands at %s."
@@ -449,7 +459,7 @@ class BandParity(MSONable):
                     iden_sum = int(np.sum(self.trim_data[spin][label]["iden"][:nocc]))
                     if (
                         nele < iden_sum
-                        and int(self.trim_data["up"][label]["parity"][nocc-1]) == 0
+                        and int(self.trim_data["up"][label]["parity"][nocc - 1]) == 0
                     ):
                         raise RuntimeError(
                             "Cannot tell the parity of the highest occupied state at %s."
@@ -457,7 +467,10 @@ class BandParity(MSONable):
                         )
                 else:
                     if np.all(
-                        [int(i) != 1.0 for i in self.trim_data[spin][label]["iden"][:nocc]]
+                        [
+                            int(i) != 1.0
+                            for i in self.trim_data[spin][label]["iden"][:nocc]
+                        ]
                     ):
                         warnings.warn(
                             "Spin polarized selected, but at least one TRIM point shows all doubly degenerate bands."
@@ -466,7 +479,7 @@ class BandParity(MSONable):
                     iden_sum = int(np.sum(self.trim_data[spin][label]["iden"][:nocc]))
                     if (
                         nele < iden_sum
-                        and int(self.trim_data[spin][label]["parity"][nocc-1]) > 1
+                        and int(self.trim_data[spin][label]["parity"][nocc - 1]) > 1
                     ):
                         raise RuntimeError(
                             "Cannot tell the parity of the highest occupied state at %s."
@@ -489,7 +502,9 @@ class BandParity(MSONable):
                     temp_energy_eig = energy * np.ones(iden)
 
                     for j in range(0, iden):
-                        if np.isclose(np.sum(temp_parity_eig), parity, rtol=0, atol=eigenval_tol):
+                        if np.isclose(
+                            np.sum(temp_parity_eig), parity, rtol=0, atol=eigenval_tol
+                        ):
                             break
                         else:
                             temp_parity_eig[j] = -1.0
