@@ -177,9 +177,7 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
 
         wf = add_modify_incar(
             wf,
-            modify_incar_params={
-                "incar_update": {"ISYM": 2, "MAGMOM": "%s" % magmoms}
-            },
+            modify_incar_params={"incar_update": {"ISYM": 2, "MAGMOM": "%s" % magmoms}},
         )
 
     if magnetic and not soc:
@@ -197,9 +195,7 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
             "incar_update": {
                 "ISYM": 2,
                 "LSORBIT": ".TRUE." if soc else ".FALSE.",
-                "MAGMOM": "%s" % magmoms
-                if magnetic
-                else "%i*0.0" % ncoords,
+                "MAGMOM": "%s" % magmoms if magnetic else "%i*0.0" % ncoords,
                 "ISPIN": 2 if magnetic and not soc else 1,
                 "LWAVE": ".TRUE.",
                 # "NBANDS": nbands,
@@ -210,8 +206,9 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
 
     wf = add_common_powerups(wf, c)
 
-    wf = add_additional_fields_to_taskdocs(wf, {"wf_meta": wf_meta},
-        task_name_constraint="VaspToDb")
+    wf = add_additional_fields_to_taskdocs(
+        wf, {"wf_meta": wf_meta}, task_name_constraint="VaspToDb"
+    )
 
     if c.get("STABILITY_CHECK", STABILITY_CHECK):
         wf = add_stability_check(wf, fw_name_constraint="structure optimization")
