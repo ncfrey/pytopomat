@@ -75,10 +75,12 @@ class IRVSPCaller:
 
         # Remove SGOs from OUTCAR other than identity and inversion to avoid errors
 
-        #if sgn not in ssgs:  # non-symmorphic; this doesn't work!
-            
-        self.modify_outcar()
-        sgn = 2  # SG 2 (only E and I)
+        if sgn not in ssgs:  # non-symmorphic
+            v = 2
+            warnings.warn("Careful running with v2 supporting non-symmorphic groups.")
+
+        # self.modify_outcar()
+        # sgn = 2  # SG 2 (only E and I)
 
         # Call irvsp
         cmd_list = ["irvsp", "-sg", str(sgn), "-v", str(v)]
@@ -136,11 +138,10 @@ class IRVSPCaller:
                         sgo_lines = list(range(idx + 1, idx + num_ops + 1))
                     if idx == irot_start + num_ops:
                         output.write(identity_op)
-                        output.write(inv_op) 
+                        output.write(inv_op)
                         output.write("\n")
                     if idx not in sgo_lines:
                         output.write(line)
-
 
         os.rename("OUTCAR", name)
         os.rename("temp.txt", "OUTCAR")
@@ -260,7 +261,7 @@ class IRVSPOutput(MSONable):
                         line_list = line_list.split("=", 1)[
                             0
                         ]  # delete irrep label at end of line
-                        #line_list = [i for i in line_list.split(" ") if i]
+                        # line_list = [i for i in line_list.split(" ") if i]
 
                         # Check that trace line is complete, no ?? or errors
                         if len(line_list) > 30:  # symmops + band eigenval
@@ -268,10 +269,13 @@ class IRVSPOutput(MSONable):
                             ndg = int(line[3:6].strip())  # band degeneracy
                             bnd_ev = float(line[6:16].strip())
                             inv_ev = float(line[27:33].strip())
-                            
-                            if not np.isclose(inv_ev%1.0, 0.0, rtol=0, atol=0.03) or \
-                               not np.isclose(inv_ev%1.0, 1.0, rtol=0, atol=0.03):
-                               warnings.warn("IRVSP output data has non-integer parity eigenvalues!")
+
+                            if not np.isclose(
+                                inv_ev % 1.0, 0.0, rtol=0, atol=0.03
+                            ) or not np.isclose(inv_ev % 1.0, 1.0, rtol=0, atol=0.03):
+                                warnings.warn(
+                                    "IRVSP output data has non-integer parity eigenvalues!"
+                                )
 
                             bnds.append(bnd)
                             ndgs.append(ndg)
