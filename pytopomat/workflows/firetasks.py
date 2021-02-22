@@ -72,7 +72,7 @@ class RunIRVSP(FiretaskBase):
 @explicit_serialize
 class StandardizeCell(FiretaskBase):
     """
-    Standardize cell with spglib and symprec=1e-2.
+    Standardize primitive cell with spglib and symprec=1e-2.
 
     """
 
@@ -93,7 +93,7 @@ class StandardizeCell(FiretaskBase):
             magmoms = None
             cell = (lattice, positions, numbers)
 
-        lat, pos, nums = standardize_cell(cell, to_primitive=False, symprec=1e-2)
+        lat, pos, nums = standardize_cell(cell, to_primitive=True, symprec=1e-2)
 
         structure = Structure(lat, nums, pos)
 
