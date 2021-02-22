@@ -227,13 +227,7 @@ class IrrepOutput(MSONable):
                                 "inversion_eigenval": inv_evs,
                             }
 
-                            if self.spin_polarized:
-                                if trim_label in parity_eigenvals.keys():
-                                    parity_eigenvals[trim_label]["down"] = kvec_data
-                                else:
-                                    parity_eigenvals[trim_label] = {"up": kvec_data}
-                            else:
-                                parity_eigenvals[trim_label] = kvec_data
+                            parity_eigenvals[trim_label] = kvec_data
 
                             continue
 
@@ -241,6 +235,6 @@ class IrrepOutput(MSONable):
 
         except FileNotFoundError:
             warnings.warn(
-                "irrep output not found. Setting instance attributes from direct inputs!"
+                "Irrep output not found. Setting instance attributes from direct inputs!"
             )
 
