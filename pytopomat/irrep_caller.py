@@ -36,7 +36,7 @@ class IrrepCaller:
         "IRREPCaller requires irrep to be in the path.\n"
         "Please follow the instructions in https://pypi.org/project/irrep and https://arxiv.org/pdf/2009.01764.pdf ",
     )
-    def __init__(self, folder_name, enable_spinor=True):
+    def __init__(self, folder_name, code="vasp", enable_spinor=True, add_args={}):
         """
         Run irrep to compute irreducible representations (irreps) of electronic states from wavefunctions (WAVECAR) and
         symmetry operations determined from the POSCAR structure.
@@ -48,7 +48,9 @@ class IrrepCaller:
 
         Args:
             folder_name (str): Path to directory with POSCAR and WAVECAR at kpts where irreps should be computed.
+            code (str): The code to run with. Default is vasp.
             enable_spinor (bool): Whether to include the '-spinor' flag when calling irrep.
+            add_args (dict): Dictionary of additional arguments (i.e. {-Ecut: 50}).
         """
 
         # Check for POSCAR and WAVECAR
@@ -60,10 +62,13 @@ class IrrepCaller:
         os.chdir(folder_name)
 
         # Call irrep
-        cmd_list = ["irrep", "-code", "vasp"]
+        cmd_list = ["irrep", "-code", code]
 
         if enable_spinor:
             cmd_list += ["-spinor"]
+
+        for arg, val in add_args.items():
+            cmd_list += [str(arg), str(val)]
 
         with open("outir.txt", "w") as out, open("err.txt", "w") as err:
             process = subprocess.Popen(cmd_list, stdout=out, stderr=err)
