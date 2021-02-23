@@ -53,13 +53,16 @@ class Z2PackCaller:
             system (z2pack System object): Configuration for dynamically calling vasp within z2pack.
             surface (str): Labels the surface, e.g. [t1/2, t2, 0] <-> "kz_0".
 
-        This module makes extensive use of the z2pack tool for calculating topological invariants to identify topological phases. It is mainly meant to be used in band structure workflows for high throughput classification of band topology.
+        This module makes extensive use of the z2pack tool for calculating topological invariants to identify topological phases. 
+        It is mainly meant to be used in band structure workflows for high throughput classification of band topology.
 
         If you use this module, please cite the following papers:
 
-        Dominik Gresch, Gabriel Autès, Oleg V. Yazyev, Matthias Troyer, David Vanderbilt, B. Andrei Bernevig, and Alexey A. Soluyanov “Z2Pack: Numerical Implementation of Hybrid Wannier Centers for Identifying Topological Materials” [PhysRevB.95.075146]
+        Dominik Gresch, Gabriel Autès, Oleg V. Yazyev, Matthias Troyer, David Vanderbilt, B. Andrei Bernevig, and Alexey A. Soluyanov 
+        “Z2Pack: Numerical Implementation of Hybrid Wannier Centers for Identifying Topological Materials” [PhysRevB.95.075146]
 
-        Alexey A. Soluyanov and David Vanderbilt “Computing topological invariants without inversion symmetry” [PhysRevB.83.235401]
+        Alexey A. Soluyanov and David Vanderbilt “Computing topological invariants without inversion symmetry” 
+        [PhysRevB.83.235401]
 
         """
 
@@ -110,7 +113,8 @@ class Z2PackCaller:
                 d = {k: v}
                 z2d.update(d)
 
-        # Create a Brillouin zone surface for calculating the Wilson loop / Wannier charge centers (defaults to k_z = 0 surface)
+        # Create a Brillouin zone surface for calculating the Wilson loop / Wannier charge centers
+        # (defaults to k_z = 0 surface)
         surfaces = {
             "kx_0": lambda s, t: [0, s / 2, t],
             "kx_1": lambda s, t: [0.5, s / 2, t],
@@ -138,7 +142,14 @@ class Z2PackCaller:
 
 
 class Z2Output(MSONable):
-    def __init__(self, result=None, surface=None, result_dict=None, chern_number=None, z2_invariant=None):
+    def __init__(
+        self,
+        result=None,
+        surface=None,
+        result_dict=None,
+        chern_number=None,
+        z2_invariant=None,
+    ):
         """
         Class for storing results of band topology analysis.
 
@@ -186,23 +197,24 @@ class Z2Output(MSONable):
             surface=d["surface"],
             result_dict=d["result_dict"],
             chern_number=d["chern_number"],
-            z2_invariant=d["z2_invariant"])
+            z2_invariant=d["z2_invariant"],
+        )
 
         return z2o
 
     def _result_to_dict(self, result):
         # Convert result object to dict
-        z2pack.io.save(result, 'result_temp.json')
-        result_dict = loadfn('result_temp.json')
-        os.remove('result_temp.json')
+        z2pack.io.save(result, "result_temp.json")
+        result_dict = loadfn("result_temp.json")
+        os.remove("result_temp.json")
 
         return result_dict
 
     @staticmethod
     def _dict_to_result(result_dict):
-        dumpfn(result_dict, 'result_temp.json')
-        result = z2pack.io.load('result_temp.json')
-        os.remove('result_temp.json')
+        dumpfn(result_dict, "result_temp.json")
+        result = z2pack.io.load("result_temp.json")
+        os.remove("result_temp.json")
 
         return result
 
@@ -222,8 +234,3 @@ class Z2Output(MSONable):
             warnings.warn(
                 "Z2Pack result not found. Setting instance attributes from direct inputs!"
             )
-
-
-
-
-

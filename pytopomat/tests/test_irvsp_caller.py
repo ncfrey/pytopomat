@@ -1,4 +1,3 @@
-import warnings
 import os
 import pytest
 
@@ -35,7 +34,7 @@ class TestIrvsp(object):
         out = loadfn("tmp.json")
         os.remove("tmp.json")
 
-        assert out.soc == True
+        assert out.soc is True
 
     def test_output_trims(self, parity_eigenvals):
 

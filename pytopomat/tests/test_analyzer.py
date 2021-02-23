@@ -1,4 +1,3 @@
-import warnings
 import os
 import numpy as np
 import pytest
@@ -7,6 +6,7 @@ from pytopomat.irvsp_caller import IRVSPOutput
 from pytopomat.analyzer import BandParity
 
 test_dir = os.path.join(os.path.dirname(__file__), "../../test_files/")
+
 
 class TestIrvsp(object):
     @pytest.fixture
@@ -19,15 +19,15 @@ class TestIrvsp(object):
         return band_parity
 
     def test_compute_z2(self, bp):
-    	z2 = bp.compute_z2(tol=2)
-    	tz2 = np.array([0., 0., 0., 0.])
+        z2 = bp.compute_z2(tol=2)
+        tz2 = np.array([0.0, 0.0, 0.0, 0.0])
 
-    	np.testing.assert_array_equal(z2, tz2)
+        np.testing.assert_array_equal(z2, tz2)
 
     def test_compute_z4(self, bp):
-    	z4 = bp.compute_z4()
+        z4 = bp.compute_z4()
 
-    	assert z4 == 3.0
+        assert z4 == 3.0
 
 
 if __name__ == "__main__":
