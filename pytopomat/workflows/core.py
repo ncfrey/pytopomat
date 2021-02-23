@@ -115,7 +115,7 @@ def wf_irrep(structure, magnetic=False, soc=False, c=None):
         {"wf_uuid": uuid},  # irrep
     ]
 
-    yaml_spec = "irvsp.yaml"
+    yaml_spec = "irrep.yaml"
 
     wf = get_wf(
         structure,

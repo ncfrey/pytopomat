@@ -82,7 +82,7 @@ class IrrepFW(Firework):
             [
                 RunIrrep(),
                 PassCalcLocs(name=name),
-                IrrepToDb(db_file=db_file, wf_uuid=wf_uuid, irvsp_out=irrep_out),
+                IrrepToDb(db_file=db_file, wf_uuid=wf_uuid, irrep_out=irrep_out),
             ]
         )
 
