@@ -38,26 +38,28 @@ class IrrepCaller:
     )
     def __init__(self, folder_name, code="vasp", enable_spinor=True, add_args={}):
         """
-        Run irrep to compute irreducible representations (irreps) of electronic states from wavefunctions (WAVECAR) and
-        symmetry operations determined from the POSCAR structure.
+        Run irrep to compute irreducible representations (irreps) of electronic states from wavefunctions and
+        symmetry operations determined from an input structure.
 
-        Requires a calculation with LWAVE=.TRUE. This does NOT use the symmetry operations found in the OUTCAR file.
+        For running with vasp (default), it requires a calculation with LWAVE=.TRUE. This does NOT use the symmetry 
+        operations found in the OUTCAR file.
 
         Something like "phonopy --tolerance 0.01 --symmetry -c POSCAR" should be used to ensure
         the crystal is in a standard setting before the calculation.
 
         Args:
-            folder_name (str): Path to directory with POSCAR and WAVECAR at kpts where irreps should be computed.
+            folder_name (str): Path to directory with input data at kpts where irreps should be computed.
             code (str): The code to run with. Default is vasp.
             enable_spinor (bool): Whether to include the '-spinor' flag when calling irrep.
             add_args (dict): Dictionary of additional arguments (i.e. {-Ecut: 50}).
         """
 
-        # Check for POSCAR and WAVECAR
-        if not path.isfile(folder_name + "/WAVECAR") or not path.isfile(
-            folder_name + "/POSCAR"
-        ):
-            raise FileNotFoundError()
+        # Check for POSCAR and WAVECAR if using vasp
+        if code == "vasp":
+            if not path.isfile(folder_name + "/WAVECAR") or not path.isfile(
+                folder_name + "/POSCAR"
+            ):
+                raise FileNotFoundError()
 
         os.chdir(folder_name)
 
