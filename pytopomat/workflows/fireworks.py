@@ -3,19 +3,14 @@ FWs for wflows.
 
 """
 
-import warnings
-import os
-
 from fireworks import Firework
 
-from pymatgen import Structure
-
-from atomate.vasp.config import VASP_CMD, DB_FILE
-from atomate.common.firetasks.glue_tasks import PassCalcLocs, CopyFiles
-from atomate.vasp.firetasks.parse_outputs import VaspToDb
+from atomate.common.firetasks.glue_tasks import PassCalcLocs
 from atomate.vasp.firetasks.glue_tasks import CopyVaspOutputs
 
 from pytopomat.workflows.firetasks import (
+    RunIrrep,
+    IrrepToDb,
     RunIRVSP,
     IRVSPToDb,
     Vasp2TraceToDb,
@@ -28,6 +23,70 @@ from pytopomat.workflows.firetasks import (
     InvariantsToDB,
     StandardizeCell,
 )
+
+
+class IrrepFW(Firework):
+    def __init__(
+        self,
+        parents=None,
+        structure=None,
+        name="irrep",
+        wf_uuid=None,
+        db_file=None,
+        prev_calc_dir=None,
+        irrep_out=None,
+        vasp_cmd=None,
+        **kwargs
+    ):
+        """
+        Run irrep and parse the output data. Assumes you have a previous FW with the 
+        calc_locs passed into the current FW.
+
+        Args:
+            structure (Structure): - only used for setting name of FW
+            name (str): name of this FW
+            wf_uuid (str): unique wf id
+            db_file (str): path to the db file
+            parents (Firework): Parents of this particular Firework. FW or list of FWS.
+            prev_calc_dir (str): Path to a previous calculation to copy from
+            \\*\\*kwargs: Other kwargs that are passed to Firework.__init__.
+
+        """
+
+        fw_name = "{}-{}".format(
+            structure.composition.reduced_formula if structure else "unknown", name
+        )
+
+        t = []
+
+        if prev_calc_dir:
+            t.append(
+                CopyVaspOutputs(
+                    calc_dir=prev_calc_dir,
+                    additional_files=["CHGCAR", "WAVECAR", "POSCAR"],
+                    contcar_to_poscar=True,
+                )
+            )
+        elif parents:
+            t.append(
+                CopyVaspOutputs(
+                    calc_loc=True,
+                    additional_files=["CHGCAR", "WAVECAR", "POSCAR"],
+                    contcar_to_poscar=True,
+                )
+            )
+        else:
+            raise ValueError("Must specify structure or previous calculation")
+
+        t.extend(
+            [
+                RunIrrep(),
+                PassCalcLocs(name=name),
+                IrrepToDb(db_file=db_file, wf_uuid=wf_uuid, irvsp_out=irrep_out),
+            ]
+        )
+
+        super(IrrepFW, self).__init__(t, parents=parents, name=fw_name, **kwargs)
 
 
 class IrvspFW(Firework):
@@ -54,7 +113,7 @@ class IrvspFW(Firework):
             db_file (str): path to the db file
             parents (Firework): Parents of this particular Firework. FW or list of FWS.
             prev_calc_dir (str): Path to a previous calculation to copy from
-            \*\*kwargs: Other kwargs that are passed to Firework.__init__.
+            \\*\\*kwargs: Other kwargs that are passed to Firework.__init__.
 
         """
 
@@ -87,8 +146,7 @@ class IrvspFW(Firework):
             [
                 RunIRVSP(),
                 PassCalcLocs(name=name),
-                IRVSPToDb(db_file=db_file, wf_uuid=wf_uuid,
-                    irvsp_out=irvsp_out),
+                IRVSPToDb(db_file=db_file, wf_uuid=wf_uuid, irvsp_out=irvsp_out),
             ]
         )
 
@@ -107,7 +165,7 @@ class StandardizeFW(Firework):
         **kwargs
     ):
         """
-        Standardize the structure with spglib.
+        Standardize the structure with spglib. Output is the primitive standard.
 
         Args:
             structure (Structure): pmg structure.
@@ -115,7 +173,7 @@ class StandardizeFW(Firework):
             db_file (str): path to the db file
             parents (Firework): Parents of this particular Firework. FW or list of FWS.
             prev_calc_dir (str): Path to a previous calculation to copy from
-            \*\*kwargs: Other kwargs that are passed to Firework.__init__.
+            \\*\\*kwargs: Other kwargs that are passed to Firework.__init__.
         """
         fw_name = "{}-{}".format(
             structure.composition.reduced_formula if structure else "unknown", name
@@ -124,27 +182,14 @@ class StandardizeFW(Firework):
         t = []
 
         if prev_calc_dir:
-            t.append(
-                CopyVaspOutputs(
-                    calc_dir=prev_calc_dir,
-                    contcar_to_poscar=True,
-                )
-            )
+            t.append(CopyVaspOutputs(calc_dir=prev_calc_dir, contcar_to_poscar=True,))
         elif parents:
-            t.append(
-                CopyVaspOutputs(
-                    calc_loc=True,
-                    contcar_to_poscar=True,
-                )
-            )
+            t.append(CopyVaspOutputs(calc_loc=True, contcar_to_poscar=True,))
         else:
             raise ValueError("Must specify structure or previous calculation")
 
         t.extend(
-            [
-                StandardizeCell(),
-                PassCalcLocs(name=name),
-            ]
+            [StandardizeCell(), PassCalcLocs(name=name),]
         )
 
         super(StandardizeFW, self).__init__(t, parents=parents, name=fw_name, **kwargs)
@@ -172,7 +217,7 @@ class Vasp2TraceFW(Firework):
             db_file (str): path to the db file
             parents (Firework): Parents of this particular Firework. FW or list of FWS.
             prev_calc_dir (str): Path to a previous calculation to copy from
-            \*\*kwargs: Other kwargs that are passed to Firework.__init__.
+            \\*\\*kwargs: Other kwargs that are passed to Firework.__init__.
         """
         fw_name = "{}-{}".format(
             structure.composition.reduced_formula if structure else "unknown", name
@@ -232,7 +277,7 @@ class Vasp2TraceMagneticFW(Firework):
             db_file (str): path to the db file
             parents (Firework): Parents of this particular Firework. FW or list of FWS.
             prev_calc_dir (str): Path to a previous calculation to copy from
-            \*\*kwargs: Other kwargs that are passed to Firework.__init__.
+            \\*\\*kwargs: Other kwargs that are passed to Firework.__init__.
         """
         fw_name = "{}-{}".format(
             structure.composition.reduced_formula if structure else "unknown", name
@@ -287,7 +332,8 @@ class Z2PackFW(Firework):
         **kwargs
     ):
         """
-        Run Z2Pack and parse the output data. Assumes you have a previous FW with the calc_locs passed into the current FW.
+        Run Z2Pack and parse the output data. 
+        Assumes you have a previous FW with the calc_locs passed into the current FW.
 
         Args:
             structure (Structure): Structure object.
@@ -297,7 +343,7 @@ class Z2PackFW(Firework):
             db_file (str): path to the db file
             parents (Firework): Parents of this particular Firework. FW or list of FWS.
             prev_calc_dir (str): Path to a previous calculation to copy from
-            \*\*kwargs: Other kwargs that are passed to Firework.__init__.
+            \\*\\*kwargs: Other kwargs that are passed to Firework.__init__.
         """
 
         self.structure = structure
@@ -373,7 +419,7 @@ class InvariantFW(Firework):
             name (str): name of this FW
             db_file (str): path to the db file
             parents (Firework): Parents of this particular Firework. FW or list of FWS.
-            \*\*kwargs: Other kwargs that are passed to Firework.__init__.
+            \\*\\*kwargs: Other kwargs that are passed to Firework.__init__.
         """
 
         fw_name = "{}-{}".format(

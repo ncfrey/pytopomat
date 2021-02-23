@@ -9,7 +9,6 @@ import os
 
 from uuid import uuid4
 
-from pymatgen import Structure
 from pymatgen.io.vasp.inputs import Kpoints
 from pymatgen.io.vasp.sets import MPStaticSet, MPRelaxSet
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
@@ -39,6 +38,175 @@ __maintainer__ = "Jason Munro, Nathan C. Frey"
 __email__ = "jmunro@lbl.gov, ncfrey@lbl.gov"
 __status__ = "Development"
 __date__ = "August 2019"
+
+
+def wf_irrep(structure, magnetic=False, soc=False, c=None):
+    """
+    Fireworks workflow for running an irrep calculation.
+
+    Args:
+        structure (Structure): Pymatgen structure object
+        magnetic (bool): Whether the calculation is on a magnetic structure
+        soc (bool): Spin-orbit coupling included
+
+    Returns:
+        Workflow
+
+    """
+
+    c = c or {}
+    vasp_cmd = c.get("VASP_CMD", VASP_CMD)
+    db_file = c.get("DB_FILE", DB_FILE)
+
+    uuid = str(uuid4())
+    wf_meta = {"wf_uuid": uuid, "wf_name": "Irrep WF"}
+
+    magmoms = None
+
+    if magnetic and "magmom" in structure.site_properties:
+        magmoms_orig = structure.site_properties["magmom"]
+        magmoms = [str(m) for m in magmoms_orig]
+        magmoms = " ".join(magmoms)
+    elif magnetic:
+        raise RuntimeError(
+            "Structure must have magnetic moments in site_properties for magnetic calcualtion!"
+        )
+
+    ncoords = 3 * len(structure.sites)
+
+    nbands = 0
+
+    for site in structure.sites:
+        nbands += site.species.total_electrons
+
+    trim_kpoints = Kpoints(
+        comment="TRIM Points",
+        num_kpts=8,
+        style=Kpoints.supported_modes.Reciprocal,
+        kpts=(
+            (0, 0, 0),
+            (0.5, 0, 0),
+            (0, 0.5, 0),
+            (0, 0, 0.5),
+            (0.5, 0.5, 0),
+            (0, 0.5, 0.5),
+            (0.5, 0, 0.5),
+            (0.5, 0.5, 0.5),
+        ),
+        kpts_shift=(0, 0, 0),
+        kpts_weights=[1, 1, 1, 1, 1, 1, 1, 1],
+        coord_type="Reciprocal",
+        labels=["gamma", "x", "y", "z", "s", "t", "u", "r"],
+        tet_number=0,
+        tet_weight=0,
+        tet_connections=None,
+    )
+
+    # params dicts for wf
+    params = [
+        {},  # optimization
+        {},  # standardization
+        {},  # static
+        {
+            "input_set_overrides": {
+                "other_params": {"user_kpoints_settings": trim_kpoints}
+            }
+        },  # nscf
+        {"wf_uuid": uuid},  # irrep
+    ]
+
+    yaml_spec = "irvsp.yaml"
+
+    wf = get_wf(
+        structure,
+        yaml_spec,
+        params=params,
+        vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
+        common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},
+        wf_metadata=wf_meta,
+    )
+
+    dim_data = StructureDimensionality(structure)
+
+    if np.any(
+        [
+            dim == 2
+            for dim in [dim_data.larsen_dim, dim_data.cheon_dim, dim_data.gorai_dim]
+        ]
+    ):
+        wf = add_modify_incar(
+            wf,
+            modify_incar_params={
+                "incar_update": {"IVDW": 11, "EDIFFG": 0.005, "IBRION": 2, "NSW": 100}
+            },
+            fw_name_constraint="structure optimization",
+        )
+    else:
+        wf = add_modify_incar(
+            wf,
+            modify_incar_params={
+                "incar_update": {"EDIFFG": 0.005, "IBRION": 2, "NSW": 100}
+            },
+            fw_name_constraint="structure optimization",
+        )
+
+    wf = add_modify_incar(
+        wf,
+        modify_incar_params={
+            "incar_update": {"ADDGRID": ".TRUE.", "LASPH": ".TRUE.", "GGA": "PS"}
+        },
+    )
+
+    # Includ ncl magmoms with saxis = (0, 0, 1)
+    if magnetic and soc:
+        magmoms = []
+        for m in magmoms_orig:
+            magmoms += [0.0, 0.0, m]
+        magmoms = [str(m) for m in magmoms]
+        magmoms = " ".join(magmoms)
+
+        wf = add_modify_incar(
+            wf,
+            modify_incar_params={"incar_update": {"ISYM": 2, "MAGMOM": "%s" % magmoms}},
+        )
+
+    if magnetic and not soc:
+        # Include magmoms in every calculation
+        wf = add_modify_incar(
+            wf,
+            modify_incar_params={
+                "incar_update": {"ISYM": 2, "MAGMOM": "%s" % magmoms, "ISPIN": 2}
+            },
+        )
+
+    wf = add_modify_incar(
+        wf,
+        modify_incar_params={
+            "incar_update": {
+                "ISYM": 2,
+                "LSORBIT": ".TRUE." if soc else ".FALSE.",
+                "MAGMOM": "%s" % magmoms if magnetic else "%i*0.0" % ncoords,
+                "ISPIN": 2 if magnetic and not soc else 1,
+                "LWAVE": ".TRUE.",
+                # "NBANDS": nbands,
+            }
+        },
+        fw_name_constraint="nscf",
+    )
+
+    wf = add_common_powerups(wf, c)
+
+    wf = add_additional_fields_to_taskdocs(
+        wf, {"wf_meta": wf_meta}, task_name_constraint="VaspToDb"
+    )
+
+    if c.get("STABILITY_CHECK", STABILITY_CHECK):
+        wf = add_stability_check(wf, fw_name_constraint="structure optimization")
+
+    if c.get("ADD_WF_METADATA", ADD_WF_METADATA):
+        wf = add_wf_metadata(wf, structure)
+
+    return wf
 
 
 def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
@@ -356,8 +524,6 @@ def wf_vasp2trace_magnetic(structure, c=None):
     vasp_cmd = c.get("VASP_CMD", VASP_CMD)
     db_file = c.get("DB_FILE", DB_FILE)
 
-    ncoords = 3 * len(structure.sites)
-
     if "magmom" in structure.site_properties:
         magmoms = structure.site_properties["magmom"]
         magmoms = [str(m) for m in magmoms]
@@ -611,10 +777,6 @@ class Z2PackWF:
         """
 
         c = c or {"VASP_CMD": VASP_CMD, "DB_FILE": DB_FILE}
-        vasp_cmd = c.get("VASP_CMD", VASP_CMD)
-        db_file = c.get("DB_FILE", DB_FILE)
-
-        nsites = len(self.structure.sites)
 
         vis = MPRelaxSet(self.structure, potcar_functional="PBE_54", force_gamma=True)
 

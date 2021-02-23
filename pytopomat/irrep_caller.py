@@ -12,10 +12,6 @@ import re
 from monty.json import MSONable
 from monty.dev import requires
 from monty.os.path import which
-from monty.serialization import loadfn
-
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-from pymatgen.core import Structure
 
 import numpy as np
 
@@ -41,7 +37,7 @@ class IrrepCaller:
         Run irrep to compute irreducible representations (irreps) of electronic states from wavefunctions and
         symmetry operations determined from an input structure.
 
-        For running with vasp (default), it requires a calculation with LWAVE=.TRUE. This does NOT use the symmetry 
+        For running with vasp (default), it requires a calculation with LWAVE=.TRUE. This does NOT use the symmetry
         operations found in the OUTCAR file.
 
         Something like "phonopy --tolerance 0.01 --symmetry -c POSCAR" should be used to ensure
@@ -100,7 +96,7 @@ class IrrepOutput(MSONable):
         parity_eigenvals=None,
     ):
         """
-        This class processes results from irrep to get irreps of electronic states. 
+        This class processes results from irrep to get irreps of electronic states.
 
         Refer to https://arxiv.org/pdf/2009.01764.pdf for further explanation of parameters.
 
@@ -189,7 +185,7 @@ class IrrepOutput(MSONable):
                 for line in trunc_lines[irrep_block_start:]:
 
                     if line.startswith("k-point"):  # New kvec
-                        line_list = re.findall("\[(.*)\]", line)[0].split()
+                        line_list = re.findall("\\[(.*)\\]", line)[0].split()
                         kvec = tuple([float(i) for i in line_list])
                         trim_label = trim_dict[kvec]
 
@@ -244,4 +240,3 @@ class IrrepOutput(MSONable):
             warnings.warn(
                 "Irrep output not found. Setting instance attributes from direct inputs!"
             )
-
