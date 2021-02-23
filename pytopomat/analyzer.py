@@ -2,7 +2,7 @@
 Compute topological invariants.
 
 This module offers a high level framework for analyzing topological materials in a 
-high-throughput context with VASP, Z2Pack, irvsp, and Vasp2Trace.
+high-throughput context with VASP, Z2Pack, irrep, irvsp, and Vasp2Trace.
 
 """
 
@@ -21,6 +21,7 @@ from pymatgen.analysis.dimensionality import (
 
 from pytopomat.vasp2trace_caller import Vasp2TraceOutput
 from pytopomat.irvsp_caller import IRVSPOutput
+from pytopomat.irrep_caller import IrrepOutput
 
 __author__ = "Nathan C. Frey, Jason Munro"
 __copyright__ = "MIT License"
@@ -65,22 +66,17 @@ class BandParity(MSONable):
         Z. Wang Nature (2019) 566, 480-485. doi:10.1038/s41586-019-0954-4.
 
         Args:
-            calc_output (dict or IRVSPOutput): Dict of {'up':
+            calc_output (dict or IRVSPOutput or IrrepOutput): Dict of {'up':
                 Vasp2TraceOutput object} or {'up': v2to, 'down': v2to},
                 or IRVSPOutput object.
             trim_data (dict): Maps TRIM point labels to band eigenvals and
                 energies. Contains dict of {"energies": List, "iden": List,
                 "parity": List}
             spin_polarized (bool): Spin-polarized or not.
-            efermi (float): Fermi level. Only necessary if IRVSPOutput object
-                is given.
+            efermi (float): Fermi level. Only necessary if IrrepOutput or IRVSPOutput 
+                objectis given.
             eigenval_tol (float): Tolerance (eV) on rounding for fractional
                 parity eigenvalues.
-
-        Todo:
-            * Try to find a gapped subspace of Bloch bands
-            * Compute overall parity and Z2=(v0, v1v2v3)
-            * Report spin-polarized parity filters
 
         """
 
@@ -147,9 +143,23 @@ class BandParity(MSONable):
 
             self.trim_data = self.get_trim_data_irvsp(self.calc_output)
 
+        elif type(calc_output) == IrrepOutput:
+            self.calc_output = calc_output
+            self.trim_data = trim_data
+            self.spin_polarized = spin_polarized
+            self.efermi = efermi
+            self.eigenval_tol = eigenval_tol
+
+            if self.efermi is None:
+                raise RuntimeError(
+                    "Fermi level required if IrrepOutput object is given!"
+                )
+
+            self.trim_data = self.get_trim_data_irrep(self.calc_output)
+
         else:
             raise TypeError(
-                "Calculation output data must be generated from Vasp2TraceOutput or IRVSPOutput."
+                "Calculation output data must be generated from IrrepOutput, Vasp2TraceOutput or IRVSPOutput."
             )
 
     @staticmethod
@@ -187,6 +197,66 @@ class BandParity(MSONable):
             raise RuntimeError("Parity operation not found in vasp2trace output!")
         else:
             return parity_op_index
+
+    @staticmethod
+    def get_trim_data_irrep(irrep_output):
+        """
+        Tabulate parity and identity eigenvals, as well as energies for all 
+        occupied bands over all TRIM points.
+
+        Args:
+            irvsp_output (obj): IrrepOutput object.
+
+        Returns:
+            trim_parities (dict): Maps TRIM label to band parities.
+
+        """
+
+        # Check dimension of material and define TRIMs accordingly
+        if len(irrep_output.parity_eigenvals.keys()) == 8:  # 3D
+
+            # Define TRIM labels in units of primitive reciprocal vectors
+            trim_labels = ["gamma", "x", "y", "z", "s", "t", "u", "r"]
+            trim_pts = [
+                (0, 0, 0),
+                (0.5, 0, 0),
+                (0, 0.5, 0),
+                (0, 0, 0.5),
+                (0.5, 0.5, 0),
+                (0, 0.5, 0.5),
+                (0.5, 0, 0.5),
+                (0.5, 0.5, 0.5),
+            ]
+
+        elif len(irrep_output.parity_eigenvals.keys()) == 4:  # 2D
+            trim_labels = ["gamma", "x", "y", "s"]
+            trim_pts = [(0, 0, 0), (0.5, 0, 0), (0, 0.5, 0), (0.5, 0.5, 0)]
+
+        trims = {
+            trim_pt: trim_label for trim_pt, trim_label in zip(trim_pts, trim_labels)
+        }
+
+        if irrep_output.spin_polarized:
+            warnings.warn(
+                "Note that for irrep outputs the spin-channel data is not separated when parsed."
+            )
+
+        trim_data = {
+            "up": {
+                trim_label: {"energies": [], "iden": [], "parity": []}
+                for trim_label in trim_labels
+            }
+        }
+
+        for trim_pt, trim_label in trims.items():
+            irrep_data = irrep_output.parity_eigenvals[trim_label]
+
+            # Real part of parity eigenval
+            trim_data["up"][trim_label]["parity"] = irrep_data["inversion_eigenval"]
+            trim_data["up"][trim_label]["iden"] = irrep_data["band_degeneracy"]
+            trim_data["up"][trim_label]["energies"] = irrep_data["band_eigenval"]
+
+        return trim_data
 
     @staticmethod
     def get_trim_data_irvsp(irvsp_output):
@@ -406,7 +476,10 @@ class BandParity(MSONable):
 
         trim_labels = [key for key in self.trim_data["up"].keys()]
 
-        if type(self.calc_output) == IRVSPOutput:
+        if (
+            type(self.calc_output) == IRVSPOutput
+            or type(self.calc_output) == IrrepOutput
+        ):
             nele = 0
             gamma_energies = self.trim_data["up"]["gamma"]["energies"]
             gamma_degeneracy = self.trim_data["up"]["gamma"]["iden"]
@@ -422,6 +495,9 @@ class BandParity(MSONable):
         if not spin_polarized:
             spins = ["up"]
             criteria = nele / 2
+        elif spin_polarized and type(self.calc_output) == IrrepOutput:
+            spins = ["up"]
+            criteria = nele
         else:
             spins = ["up", "down"]
             criteria = nele
@@ -435,7 +511,10 @@ class BandParity(MSONable):
                 trim_energies_formatted[spin][label] = np.ones(int(criteria))
                 count_ele = 0
 
-                if type(self.calc_output) == IRVSPOutput:
+                if (
+                    type(self.calc_output) == IRVSPOutput
+                    or type(self.calc_output) == IrrepOutput
+                ):
                     efermi = self.efermi
                 else:
                     efermi = 0
@@ -657,7 +736,7 @@ class BandParity(MSONable):
         trim_parities_set, trim_energies_set = self._format_parity_data()
         trim_parities_up = trim_parities_set["up"]
 
-        if self.spin_polarized:
+        if self.spin_polarized and not type(self.calc_output) == IrrepOutput:
             trim_parities_down = trim_parities_set["down"]
 
         if len(trim_labels) == 8:
