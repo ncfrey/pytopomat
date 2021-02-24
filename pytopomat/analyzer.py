@@ -39,7 +39,7 @@ class BandParity(MSONable):
         trim_data=None,
         spin_polarized=None,
         efermi=None,
-        nele=None,
+        nelect=None,
         eigenval_tol=0.03,
     ):
         """
@@ -76,7 +76,7 @@ class BandParity(MSONable):
             spin_polarized (bool): Spin-polarized or not.
             efermi (float): Fermi level. Only necessary if IrrepOutput or IRVSPOutput 
                 objectis given.
-            nele (int): Total number of electrons. 
+            nelect (int): Total number of electrons. 
             eigenval_tol (float): Tolerance (eV) on rounding for fractional
                 parity eigenvalues.
 
@@ -88,7 +88,7 @@ class BandParity(MSONable):
             self.trim_data = trim_data
             self.spin_polarized = spin_polarized
             self.efermi = efermi
-            self.nele = nele
+            self.nelect = nelect
             self.eigenval_tol = eigenval_tol
 
             # Check if spin-polarized or not
@@ -137,7 +137,7 @@ class BandParity(MSONable):
             self.trim_data = trim_data
             self.spin_polarized = spin_polarized
             self.efermi = efermi
-            self.nele = nele
+            self.nelect = nelect
             self.eigenval_tol = eigenval_tol
 
             if self.efermi is None:
@@ -152,7 +152,7 @@ class BandParity(MSONable):
             self.trim_data = trim_data
             self.spin_polarized = spin_polarized
             self.efermi = efermi
-            self.nele = nele
+            self.nelect = nelect
             self.eigenval_tol = eigenval_tol
 
             if self.efermi is None:
@@ -474,7 +474,7 @@ class BandParity(MSONable):
         For spin-polarized calcs, each parity eigenvalue represents a single
         electron.
 
-        Formatted data only contains occupied bands determined using nele and efermi.
+        Formatted data only contains occupied bands determined using nelect and efermi.
 
         """
 
@@ -483,9 +483,9 @@ class BandParity(MSONable):
 
         trim_labels = [key for key in self.trim_data["up"].keys()]
 
-        nele = self.nele
+        nelect = self.nelect
 
-        if nele is None:
+        if nelect is None:
             warnings.warn(
                 "Number of electrons not provided. Will try and infer total from identity eigenvalues."
             )
@@ -493,27 +493,27 @@ class BandParity(MSONable):
                 type(self.calc_output) == IRVSPOutput
                 or type(self.calc_output) == IrrepOutput
             ):
-                nele = 0
+                nelect = 0
                 gamma_energies = self.trim_data["up"]["gamma"]["energies"]
                 gamma_degeneracy = self.trim_data["up"]["gamma"]["iden"]
 
                 for index, degeneracy in enumerate(gamma_degeneracy):
 
                     if gamma_energies[index] - self.efermi <= 0.0:
-                        nele += degeneracy
+                        nelect += degeneracy
 
             else:
-                nele = self.calc_output["up"].num_occ_bands
+                nelect = self.calc_output["up"].num_occ_bands
 
         if not spin_polarized:
             spins = ["up"]
-            criteria = int(nele / 2)
+            criteria = int(nelect / 2)
         elif spin_polarized and type(self.calc_output) == IrrepOutput:
             spins = ["up"]
-            criteria = int(nele)
+            criteria = int(nelect)
         else:
             spins = ["up", "down"]
-            criteria = int(nele)
+            criteria = int(nelect)
 
         trim_parities_formatted = {spin: {} for spin in spins}
         trim_energies_formatted = {spin: {} for spin in spins}
@@ -550,7 +550,7 @@ class BandParity(MSONable):
 
                     iden_sum = int(np.sum(self.trim_data[spin][label]["iden"][:nocc]))
                     if (
-                        nele < iden_sum
+                        nelect < iden_sum
                         and int(self.trim_data["up"][label]["parity"][nocc - 1]) == 0
                     ):
                         raise RuntimeError(
@@ -570,7 +570,7 @@ class BandParity(MSONable):
 
                     iden_sum = int(np.sum(self.trim_data[spin][label]["iden"][:nocc]))
                     if (
-                        nele < iden_sum
+                        nelect < iden_sum
                         and int(self.trim_data[spin][label]["parity"][nocc - 1]) > 1
                     ):
                         raise RuntimeError(
