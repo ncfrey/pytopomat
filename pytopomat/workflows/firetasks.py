@@ -52,11 +52,13 @@ class RunIrrep(FiretaskBase):
 
             outcar = Outcar(wd + "/OUTCAR")
             efermi = outcar.efermi
+            nelect = outcar.nelect
 
         except FileNotFoundError:
             formula = None
             structure = None
             efermi = None
+            nelect = None
 
         data = IrrepOutput(wd + "/outir.txt", efermi=efermi)
 
@@ -66,6 +68,7 @@ class RunIrrep(FiretaskBase):
                 "structure": structure,
                 "formula": formula,
                 "efermi": efermi,
+                "nelect": nelect,
             }
         )
 
@@ -89,11 +92,13 @@ class RunIRVSP(FiretaskBase):
 
             outcar = Outcar(wd + "/OUTCAR")
             efermi = outcar.efermi
+            nelect = outcar.nelect
 
         except FileNotFoundError:
             formula = None
             structure = None
             efermi = None
+            nelect = None
 
         data = IRVSPOutput(wd + "/outir.txt")
 
@@ -103,6 +108,7 @@ class RunIRVSP(FiretaskBase):
                 "structure": structure,
                 "formula": formula,
                 "efermi": efermi,
+                "nelect": nelect,
             }
         )
 
@@ -172,6 +178,7 @@ class IrrepToDb(FiretaskBase):
         d["wf_uuid"] = self["wf_uuid"]
         d["formula"] = fw_spec["formula"]
         d["efermi"] = fw_spec["efermi"]
+        d["nelect"] = fw_spec["nelect"]
         d["structure"] = fw_spec["structure"]
         d["irrep"] = irrep
 
@@ -217,6 +224,7 @@ class IRVSPToDb(FiretaskBase):
         d["wf_uuid"] = self["wf_uuid"]
         d["formula"] = fw_spec["formula"]
         d["efermi"] = fw_spec["efermi"]
+        d["nelect"] = fw_spec["nelect"]
         d["structure"] = fw_spec["structure"]
         d["irvsp"] = irvsp
 
