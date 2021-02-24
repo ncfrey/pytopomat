@@ -39,6 +39,7 @@ class BandParity(MSONable):
         trim_data=None,
         spin_polarized=None,
         efermi=None,
+        nele=None,
         eigenval_tol=0.03,
     ):
         """
@@ -75,6 +76,7 @@ class BandParity(MSONable):
             spin_polarized (bool): Spin-polarized or not.
             efermi (float): Fermi level. Only necessary if IrrepOutput or IRVSPOutput 
                 objectis given.
+            nele (int): Total number of electrons. 
             eigenval_tol (float): Tolerance (eV) on rounding for fractional
                 parity eigenvalues.
 
@@ -86,6 +88,7 @@ class BandParity(MSONable):
             self.trim_data = trim_data
             self.spin_polarized = spin_polarized
             self.efermi = efermi
+            self.nele = nele
             self.eigenval_tol = eigenval_tol
 
             # Check if spin-polarized or not
@@ -134,6 +137,7 @@ class BandParity(MSONable):
             self.trim_data = trim_data
             self.spin_polarized = spin_polarized
             self.efermi = efermi
+            self.nele = nele
             self.eigenval_tol = eigenval_tol
 
             if self.efermi is None:
@@ -148,6 +152,7 @@ class BandParity(MSONable):
             self.trim_data = trim_data
             self.spin_polarized = spin_polarized
             self.efermi = efermi
+            self.nele = nele
             self.eigenval_tol = eigenval_tol
 
             if self.efermi is None:
@@ -193,7 +198,7 @@ class BandParity(MSONable):
             if np.array_equal(rot_mat, parity_mat):
                 parity_op_index = idx + 1  # SymmOps are 1 indexed
 
-        if parity_op_index == None:
+        if parity_op_index is None:
             raise RuntimeError("Parity operation not found in vasp2trace output!")
         else:
             return parity_op_index
@@ -467,7 +472,9 @@ class BandParity(MSONable):
         For non-spin polarized calcs, each parity eigenvalue represents a
         single Kramer's pair. 
         For spin-polarized calcs, each parity eigenvalue represents a single
-        electron. 
+        electron.
+
+        Formatted data only contains occupied bands determined using nele and efermi.
 
         """
 
@@ -476,31 +483,37 @@ class BandParity(MSONable):
 
         trim_labels = [key for key in self.trim_data["up"].keys()]
 
-        if (
-            type(self.calc_output) == IRVSPOutput
-            or type(self.calc_output) == IrrepOutput
-        ):
-            nele = 0
-            gamma_energies = self.trim_data["up"]["gamma"]["energies"]
-            gamma_degeneracy = self.trim_data["up"]["gamma"]["iden"]
+        nele = self.nele
 
-            for index, degeneracy in enumerate(gamma_degeneracy):
+        if nele is None:
+            warnings.warn(
+                "Number of electrons not provided. Will try and infer total from identity eigenvalues."
+            )
+            if (
+                type(self.calc_output) == IRVSPOutput
+                or type(self.calc_output) == IrrepOutput
+            ):
+                nele = 0
+                gamma_energies = self.trim_data["up"]["gamma"]["energies"]
+                gamma_degeneracy = self.trim_data["up"]["gamma"]["iden"]
 
-                if gamma_energies[index] - self.efermi <= 0.0:
-                    nele += degeneracy
+                for index, degeneracy in enumerate(gamma_degeneracy):
 
-        else:
-            nele = self.calc_output["up"].num_occ_bands
+                    if gamma_energies[index] - self.efermi <= 0.0:
+                        nele += degeneracy
+
+            else:
+                nele = self.calc_output["up"].num_occ_bands
 
         if not spin_polarized:
             spins = ["up"]
-            criteria = nele / 2
+            criteria = int(nele / 2)
         elif spin_polarized and type(self.calc_output) == IrrepOutput:
             spins = ["up"]
-            criteria = nele
+            criteria = int(nele)
         else:
             spins = ["up", "down"]
-            criteria = nele
+            criteria = int(nele)
 
         trim_parities_formatted = {spin: {} for spin in spins}
         trim_energies_formatted = {spin: {} for spin in spins}
@@ -592,11 +605,11 @@ class BandParity(MSONable):
                     formatted_energy_eig += list(temp_energy_eig)
 
                     count_ele += iden
-                    if count_ele == criteria:
+                    if count_ele >= criteria:
                         break
 
-                trim_parities_formatted[spin][label] = list(formatted_parity_eig)
-                trim_energies_formatted[spin][label] = list(formatted_energy_eig)
+                trim_parities_formatted[spin][label] = formatted_parity_eig[:criteria]
+                trim_energies_formatted[spin][label] = formatted_energy_eig[:criteria]
 
         return trim_parities_formatted, trim_energies_formatted
 
@@ -611,7 +624,6 @@ class BandParity(MSONable):
         """
 
         points = [key for key in trim_energies_formatted.keys()]
-        delta_e = {}
 
         mark = None
 
@@ -622,7 +634,6 @@ class BandParity(MSONable):
             return nbands + 1
         else:
             points = [key for key in trim_energies_formatted.keys()]
-            delta_e = {}
 
             mark = None
 
