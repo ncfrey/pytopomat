@@ -1,7 +1,7 @@
 import os
 import pytest
 
-from pymatgen import Structure, Lattice
+from pymatgen.core import Structure, Lattice
 
 from fireworks import LaunchPad
 from atomate.utils.testing import DB_DIR
