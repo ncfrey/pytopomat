@@ -6,3 +6,4 @@ atomate>=0.9.3
 custodian>=2019.8.24
 FireWorks>=1.9.4
 spglib>=1.14.1
+maggma>=0.26.0
