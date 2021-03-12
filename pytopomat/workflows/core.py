@@ -121,7 +121,7 @@ def wf_irrep(structure, magnetic=False, soc=False, c=None):
         structure,
         yaml_spec,
         params=params,
-        vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
+        vis=MPStaticSet(structure, user_potcar_functional="PBE_54", force_gamma=True),
         common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},
         wf_metadata=wf_meta,
     )
@@ -299,7 +299,7 @@ def wf_irvsp(structure, magnetic=False, soc=False, v2t=False, c=None):
         structure,
         yaml_spec,
         params=params,
-        vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
+        vis=MPStaticSet(structure, user_potcar_functional="PBE_54", force_gamma=True),
         common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},
         wf_metadata=wf_meta,
     )
@@ -445,7 +445,7 @@ def wf_vasp2trace_nonmagnetic(structure, c=None):
             },
             {},
         ],
-        vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
+        vis=MPStaticSet(structure, user_potcar_functional="PBE_54", force_gamma=True),
         common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},
     )
 
@@ -571,7 +571,7 @@ def wf_vasp2trace_magnetic(structure, c=None):
             },
             {},
         ],
-        vis=MPStaticSet(structure, potcar_functional="PBE_54", force_gamma=True),
+        vis=MPStaticSet(structure, user_potcar_functional="PBE_54", force_gamma=True),
         common_params={"vasp_cmd": vasp_cmd, "db_file": db_file},
     )
 
@@ -778,7 +778,9 @@ class Z2PackWF:
 
         c = c or {"VASP_CMD": VASP_CMD, "DB_FILE": DB_FILE}
 
-        vis = MPRelaxSet(self.structure, potcar_functional="PBE_54", force_gamma=True)
+        vis = MPRelaxSet(
+            self.structure, user_potcar_functional="PBE_54", force_gamma=True
+        )
 
         opt_fw = OptimizeFW(
             self.structure,
@@ -787,7 +789,9 @@ class Z2PackWF:
             db_file=c["DB_FILE"],
         )
 
-        vis = MPStaticSet(self.structure, potcar_functional="PBE_54", force_gamma=True)
+        vis = MPStaticSet(
+            self.structure, user_potcar_functional="PBE_54", force_gamma=True
+        )
 
         static_fw = StaticFW(
             self.structure,
