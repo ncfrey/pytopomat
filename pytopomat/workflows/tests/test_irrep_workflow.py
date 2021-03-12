@@ -40,6 +40,7 @@ class TestIrrepWorkflow(object):
         return bcc_bi
 
     # Will fail without .yml specs in atomate library
+    @pytest.mark.xfail
     def test_get_wflow(self, bi):
 
         wf = wf_irrep(bi, magnetic=False, soc=True)
