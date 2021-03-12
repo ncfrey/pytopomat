@@ -14,7 +14,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/ncfrey/pytopomat",
     packages=setuptools.find_packages(),
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     install_requires=[
         "z2pack>=2.1.1",
         "pymatgen>=2019.6.5",
