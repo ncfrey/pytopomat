@@ -680,6 +680,11 @@ class BandParity(MSONable):
 
         """
 
+        if not self.spin_polarized:
+            raise RuntimeError(
+                "Cannot run magnetic parity screening if spin_polarized set to False."
+            )
+
         trim_parities, trim_energies = self._format_parity_data()
 
         mag_screen = {
@@ -695,7 +700,14 @@ class BandParity(MSONable):
         # Check if any individual TRIM pt has an odd num of odd states
         odd_total_at_trim = False
 
-        for spin in ["up", "down"]:
+        if not self.spin_polarized:
+            spins = ["up"]
+        elif self.spin_polarized and type(self.calc_output) == IrrepOutput:
+            spins = ["up"]
+        else:
+            spins = ["up", "down"]
+
+        for spin in spins:
             for trim_label, band_parities in trim_parities[spin].items():
                 num_odd_at_trim = np.sum(
                     np.fromiter((1 for i in band_parities if i < 0), dtype=int)
@@ -747,7 +759,7 @@ class BandParity(MSONable):
         trim_parities_set, trim_energies_set = self._format_parity_data()
         trim_parities_up = trim_parities_set["up"]
 
-        if self.spin_polarized and not type(self.calc_output) == IrrepOutput:
+        if self.spin_polarized and type(self.calc_output) != IrrepOutput:
             trim_parities_down = trim_parities_set["down"]
 
         if len(trim_labels) == 8:
@@ -755,7 +767,7 @@ class BandParity(MSONable):
 
             for label in trim_labels:
                 for parity_index in range(len(trim_parities_up[label])):
-                    if self.spin_polarized:
+                    if self.spin_polarized and type(self.calc_output) != IrrepOutput:
                         Z4 += (
                             1
                             + trim_parities_up[label][parity_index]

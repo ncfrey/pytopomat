@@ -169,7 +169,7 @@ class IrrepOutput(MSONable):
                         break
 
                 sg_line = trunc_lines[symm_block_start + 3].split()
-                self.spacegroup_no = sg_line[3]
+                self.spacegroup_no = int(sg_line[3])
 
                 # Find inv symm. op.
                 for idx, line in enumerate(trunc_lines):
