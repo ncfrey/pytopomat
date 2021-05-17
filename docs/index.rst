@@ -6,7 +6,7 @@ Python Topological Materials (pytopomat) is a code for easy, high-throughput ana
 Features
 --------
 
-- Integration with vasp2trace, irvsp, and Z2Pack.
+- Integration with vasp2trace, irvsp, irrep, and Z2Pack.
 - Workflows built with atomate and pymatgen.
 
 Contribute

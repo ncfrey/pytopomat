@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('../pytopomat'))
 # -- Project information -----------------------------------------------------
 
 project = 'pytopomat'
-copyright = '2020, Nathan C. Frey, Jason Munro'
+copyright = '2021, Nathan C. Frey, Jason Munro'
 author = 'Nathan C. Frey, Jason Munro'
 
 # The short X.Y version
